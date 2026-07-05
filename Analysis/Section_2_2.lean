@@ -509,16 +509,23 @@ theorem Nat.trichotomous (a b:Nat) : a < b ∨ a = b ∨ a > b := by
   -- This proof is written to follow the structure of the original text.
   revert a; apply induction
   . observe why : 0 ≤ b
-    rw [le_iff_lt_or_eq] at why
     tauto
   intro a ih
   obtain case1 | case2 | case3 := ih
   . rw [lt_iff_succ_le] at case1
-    rw [le_iff_lt_or_eq] at case1
     tauto
-  . have why : a++ > b := by sorry
+  . have why : a++ > b := by
+      rw [gt_iff_lt, lt_iff]
+      rw [case2]
+      constructor
+      . use 1
+        apply succ_eq_add_one
+      exact (succ_no_fixed_point_all b).symm
     tauto
-  have why : a++ > b := by sorry
+  have why : a++ > b := by
+    have h1 := (succ_gt_self a)
+    rw [gt_iff_lt] at *
+    exact lt_of_le_of_lt (le_of_lt case3) h1
   tauto
 
 /--
@@ -530,23 +537,67 @@ theorem Nat.trichotomous (a b:Nat) : a < b ∨ a = b ∨ a > b := by
 
   Compare with Mathlib's {name}`Nat.decLe`.
 -/
+
+theorem Nat.gt_iff_not_le (a b:Nat) : a > b ↔ ¬ a ≤ b := by
+  constructor
+  . intro h
+    rw [le_iff]
+    by_contra h
+    obtain ⟨x, h1⟩ := h
+    rw [gt_iff_lt, lt_iff] at h
+    obtain ⟨⟨y,h2⟩, h3⟩ := h
+    rw [h1] at h2
+    conv at h2 =>
+      lhs
+      rw [← add_zero a]
+    rw [add_assoc] at h2
+    have h3 := add_eq_zero x y (add_left_cancel a 0 (x+y) h2).symm
+    obtain ⟨h4, h5⟩ := h3
+    rw [h4, add_zero a] at h1
+    rw [h1] at h3
+    contradiction
+  . intro h5
+    have h6 := trichotomous a b
+    rw [le_iff_lt_or_eq, not_or] at h5
+    obtain ⟨h7, h8⟩ := h5
+    obtain hlt | heq | hgt := h6
+    . contradiction
+    . contradiction
+    . exact hgt
+
+
+
+
 def Nat.decLe : (a b : Nat) → Decidable (a ≤ b)
   | 0, b => by
     apply isTrue
-    sorry
+    apply zero_le
   | a++, b => by
     cases decLe a b with
     | isTrue h =>
       cases decEq a b with
       | isTrue h =>
         apply isFalse
-        sorry
-      | isFalse h =>
+        rw [h]
+        have h1 := succ_gt_self b
+        exact (gt_iff_not_le (b++) b).mp h1
+      | isFalse h1 =>
         apply isTrue
-        sorry
+        have h2 := (le_iff_lt_or_eq a b).mp h
+        obtain h3 | h4 := h2
+        . apply (lt_iff_succ_le a b).mp h3
+        . contradiction
     | isFalse h =>
       apply isFalse
-      sorry
+      by_contra h1
+      have h2 := (gt_iff_not_le a b).mpr h
+      rw [gt_iff_lt] at h2
+      have h3 := lt_of_le_of_lt h1 h2
+      have h4 := succ_gt_self a
+      rw [gt_iff_lt] at h4
+      have h5 := And.intro h4 h3
+      apply (not_lt_of_gt a (a++)) h5
+
 
 instance Nat.decidableRel : DecidableRel (· ≤ · : Nat → Nat → Prop) := Nat.decLe
 
