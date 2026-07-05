@@ -437,11 +437,37 @@ theorem Nat.lt_iff_succ_le (a b:Nat) : a < b ↔ a++ ≤ b := by
   contradiction
 
 
-
-
 /-- (f) a < b if and only if b = a + d for positive d. -/
 theorem Nat.lt_iff_add_pos (a b:Nat) : a < b ↔ ∃ d:Nat, d.IsPos ∧ b = a + d := by
-  sorry
+  constructor
+  . intro h
+    rw [lt_iff] at h
+    obtain ⟨⟨x, h1⟩, h2⟩ := h
+    use x
+    constructor
+    . apply (isPos_iff x).mpr
+      by_contra h3
+      rw [h3, add_zero] at h1
+      rw [h1] at h2
+      contradiction
+    exact h1
+  . intro h
+    obtain ⟨x, ⟨ h4, h5 ⟩ ⟩ := h
+    rw [lt_iff]
+    constructor
+    . use x
+    replace h4 := (isPos_iff x).mp h4
+    by_contra h6
+    rw [h6] at h5
+    conv at h5 =>
+      lhs
+      rw [← add_zero b]
+    replace h5 := add_left_cancel b 0 x h5
+    rw [h5] at h4
+    contradiction
+
+
+
 
 /-- If a < b then a ̸= b,-/
 theorem Nat.ne_of_lt (a b:Nat) : a < b → a ≠ b := by
