@@ -37,6 +37,15 @@ namespace Chapter2
     Compare with Mathlib's {name}`Nat.add` -/
 abbrev Nat.add (n m : Nat) : Nat := Nat.recurse (fun _ sum ↦ sum++) m n
 
+theorem Nat.add_iterate (n m : Nat) : Nat.iterate (fun x ↦ x++) n m = Nat.add n m := by
+   unfold iterate
+   unfold add
+   unfold recurse
+   cases n with
+   | zero => rfl
+   | succ n => simp
+
+
 /-- This instance allows for the {kw (of := «term_+_»)}`+` notation to be used for natural number
     addition.-/
 instance Nat.instAdd : Add Nat where add := add
@@ -65,52 +74,73 @@ example : (2:Nat) + 3 = 5 := by
 @[simp]
 lemma Nat.add_zero (n:Nat) : n + 0 = n := by
   -- This proof is written to follow the structure of the original text.
-  revert n; apply induction
-  . exact zero_add 0
-  intro n ih
-  calc
-    (n++) + 0 = (n + 0)++ := by rfl
-    _ = n++ := by rw [ih]
+  revert n
+  apply induction
+  . rfl
+  . intro n h
+    calc
+      (n++) + 0 = (n+0)++ := by rfl
+    _ = n ++ := by rw [h]
+
+
 
 /-- Lemma 2.2.3 ({lean}`n+(m++) = (n+m)++`). Compare with Mathlib's {name}`Nat.add_succ`. -/
 lemma Nat.add_succ (n m:Nat) : n + (m++) = (n + m)++ := by
   -- this proof is written to follow the structure of the original text.
-  revert n; apply induction
-  . rw [zero_add, zero_add]
-  intro n ih
-  rw [succ_add, ih]
-  rw [succ_add]
+  revert n
+  apply induction
+  . rfl
+  . intro n h
+    rw [succ_add, h]
+    rfl
 
 
 /-- {lean}`n++ = n + 1` (Why?). Compare with Mathlib's {name}`Nat.succ_eq_add_one` -/
 theorem Nat.succ_eq_add_one (n:Nat) : n++ = n + 1 := by
-  sorry
+  revert n
+  apply induction
+  . rfl
+  . intro n h
+    rw [show 1 = 0++ from rfl, add_succ, add_zero]
 
 /-- Proposition 2.2.4 (Addition is commutative). Compare with Mathlib's {name}`Nat.add_comm` -/
 theorem Nat.add_comm (n m:Nat) : n + m = m + n := by
   -- this proof is written to follow the structure of the original text.
-  revert n; apply induction
-  . rw [zero_add, add_zero]
-  intro n ih
-  rw [succ_add]
-  rw [add_succ, ih]
+  revert n
+  apply induction
+  . rw [add_zero, zero_add]
+  . intro n h
+    rw [add_succ, ← h]
+    rfl
+
 
 /-- Proposition 2.2.5 (Addition is associative) / Exercise 2.2.1
     Compare with Mathlib's {name}`Nat.add_assoc`. -/
 theorem Nat.add_assoc (a b c:Nat) : (a + b) + c = a + (b + c) := by
-  sorry
+  revert a
+  apply induction
+  . rfl
+  . intro n h
+    rw [succ_add, succ_add]
+    rw [h]
+    rw [← succ_add]
+
+
 
 /-- Proposition 2.2.6 (Cancellation law).
     Compare with Mathlib's {name}`Nat.add_left_cancel`. -/
 theorem Nat.add_left_cancel (a b c:Nat) (habc: a + b = a + c) : b = c := by
   -- This proof is written to follow the structure of the original text.
-  revert a; apply induction
-  . intro hbc
-    rwa [zero_add, zero_add] at hbc
-  intro a ih hbc
-  rw [succ_add, succ_add] at hbc
-  replace hbc := succ_cancel hbc
-  exact ih hbc
+  revert a
+  apply induction
+  . intro h
+    rw [zero_add, zero_add] at h
+    exact h
+  . intro n h1 h2
+    rw [succ_add, succ_add] at h2
+    apply succ_cancel at h2
+    exact h1 h2
+
 
 
 /-- (Not from textbook) {name}`Nat` can be given the structure of a commutative additive monoid.
@@ -131,16 +161,31 @@ def Nat.IsPos (n:Nat) : Prop := n ≠ 0
 
 theorem Nat.isPos_iff (n:Nat) : n.IsPos ↔ n ≠ 0 := by rfl
 
+theorem Nat.succ_isPos (n:Nat): (n++).IsPos := by
+  apply (isPos_iff (n++)).mpr
+  apply succ_ne
+
+
+  -- revert n; apply induction
+  -- . intro h
+  --   replace h := (Nat.isPos_iff 0).mp h
+  --   contradiction
+  -- . intro n ih
+  --   intro ih2
+  --   apply isPos_iff
 /-- Proposition 2.2.8 (positive plus natural number is positive).
     Compare with Mathlib's {name}`Nat.add_pos_left`. -/
 theorem Nat.add_pos_left {a:Nat} (b:Nat) (ha: a.IsPos) : (a + b).IsPos := by
   -- This proof is written to follow the structure of the original text.
   revert b; apply induction
-  . rwa [add_zero]
-  intro b hab
-  rw [add_succ]
-  have : (a+b)++ ≠ 0 := succ_ne _
-  exact this
+  . rw [add_zero]
+    exact ha
+  . intro n ih
+    apply (isPos_iff (a+n++)).mpr
+    rw [add_succ]
+    apply succ_isPos
+
+
 
 /-- Compare with Mathlib's {name}`Nat.add_pos_right`.
 
@@ -154,14 +199,17 @@ theorem Nat.add_pos_right {a:Nat} (b:Nat) (ha: a.IsPos) : (b + a).IsPos := by
 theorem Nat.add_eq_zero (a b:Nat) (hab: a + b = 0) : a = 0 ∧ b = 0 := by
   -- This proof is written to follow the structure of the original text.
   by_contra h
-  simp only [not_and_or, ←ne_eq] at h
+  simp only [not_and_or, ← ne_eq] at h
   obtain ha | hb := h
   . rw [← isPos_iff] at ha
-    observe : (a + b).IsPos
+    have hac := add_pos_left b ha
+    replace hac := (Nat.isPos_iff (a+b)).mp hac
     contradiction
   rw [← isPos_iff] at hb
   observe : (a + b).IsPos
   contradiction
+
+
 
 /-
 The API in `Tools/ExistsUnique.Lean`, and the method `existsUnique_of_exists_of_unique` in
@@ -172,9 +220,22 @@ extracts a witness `x` and a proof `hx : P x` of the property from a hypothesis 
 
 #check existsUnique_of_exists_of_unique
 
+theorem Nat.succ_pred (n : Nat) (ha: n.IsPos) : (pred n)++ = n := by
+  unfold pred recurse
+  cases n with
+  | zero => contradiction
+  | succ n => simp
+
+
 /-- Lemma 2.2.10 (unique predecessor) / Exercise 2.2.2 -/
 lemma Nat.uniq_succ_eq (a:Nat) (ha: a.IsPos) : ∃! b, b++ = a := by
-  sorry
+  replace ha := succ_pred a ha
+  apply ExistsUnique.intro (pred a)
+  . exact ha
+  intro y hb
+  rw [← ha] at hb
+  exact succ_cancel hb
+
 
 /-- Definition 2.2.11 (Ordering of the natural numbers).
     This defines the {kw (of := «term_≤_»)}`≤` notation on the natural numbers. -/
@@ -204,7 +265,8 @@ lemma Nat.le_of_lt {n m:Nat} (hnm: n < m) : n ≤ m := hnm.1
 
 /-- Compare with Mathlib's {name}`Nat.le_iff_lt_or_eq`. -/
 lemma Nat.le_iff_lt_or_eq (n m:Nat) : n ≤ m ↔ n < m ∨ n = m := by
-  rw [Nat.le_iff, Nat.lt_iff]
+  rw [Nat.le_iff]
+  rw [Nat.lt_iff]
   by_cases h : n = m
   . simp [h]
     use 0
@@ -212,22 +274,33 @@ lemma Nat.le_iff_lt_or_eq (n m:Nat) : n ≤ m ↔ n < m ∨ n = m := by
   simp [h]
 
 example : (8:Nat) > 5 := by
-  rw [Nat.gt_iff_lt, Nat.lt_iff]
+  rw [Nat.gt_iff_lt]
+  rw [Nat.lt_iff]
   constructor
-  . have : (8:Nat) = 5 + 3 := by rfl
-    rw [this]
-    use 3
+  . use 3
+    decide
   decide
 
 /-- Compare with Mathlib's {name}`Nat.lt_succ_self`. -/
+@[symm]
 theorem Nat.succ_gt_self (n:Nat) : n++ > n := by
-  sorry
+  rw [Nat.gt_iff_lt]
+  rw [Nat.lt_iff]
+  constructor
+  . use 1
+    apply succ_eq_add_one
+  symm
+  apply succ_no_fixed_point
 
 /-- Proposition 2.2.12 (Basic properties of order for natural numbers) / Exercise 2.2.3
 
 (a) (Order is reflexive). Compare with Mathlib's {name}`Nat.le_refl`.-/
 theorem Nat.ge_refl (a:Nat) : a ≥ a := by
-  sorry
+  rw [Nat.ge_iff_le]
+  rw [Nat.le_iff]
+  use 0
+  apply add_comm 0 a
+
 
 @[refl]
 theorem Nat.le_refl (a:Nat) : a ≤ a := a.ge_refl
@@ -238,17 +311,83 @@ example (a b:Nat): a+b ≥ a+b := by rfl
 /-- (b) (Order is transitive).  The {tactic}`obtain` tactic will be useful here.
     Compare with Mathlib's {name}`Nat.le_trans`. -/
 theorem Nat.ge_trans {a b c:Nat} (hab: a ≥ b) (hbc: b ≥ c) : a ≥ c := by
-  sorry
+  rw [Nat.ge_iff_le, Nat.le_iff] at hab
+  rw [Nat.ge_iff_le, Nat.le_iff] at hbc
+  rw [Nat.ge_iff_le, Nat.le_iff]
+  obtain ⟨x, hx⟩ := hab
+  obtain ⟨y, hy⟩ := hbc
+  use y + x
+  rw [← add_assoc, ← hy]
+  exact hx
+
+
 
 theorem Nat.le_trans {a b c:Nat} (hab: a ≤ b) (hbc: b ≤ c) : a ≤ c := Nat.ge_trans hbc hab
 
 /-- (c) (Order is anti-symmetric). Compare with Mathlib's {name}`Nat.le_antisymm`. -/
 theorem Nat.ge_antisymm {a b:Nat} (hab: a ≥ b) (hba: b ≥ a) : a = b := by
-  sorry
+  rw [Nat.ge_iff_le, Nat.le_iff] at hab
+  rw [Nat.ge_iff_le, Nat.le_iff] at hba
+  obtain ⟨x, hx⟩ := hab
+  obtain ⟨y, hy⟩ := hba
+  rw [hx] at hy
+  conv at hy =>
+    lhs
+    rw [← add_zero b]
+  rw [add_assoc] at hy
+  replace hy := add_left_cancel b 0 (x + y) hy
+  symm at hy
+  replace hy := add_eq_zero x y hy
+  have hz := And.left hy
+  rw [hz, add_zero] at hx
+  exact hx
+
+theorem Nat.add_term_when_eq (a b c: Nat) (h: a = b):  c + a = c + b := by
+  revert c
+  apply induction
+  . simp
+    exact h
+  . intro n ih
+    rw [succ_add]
+    rw [ih]
+    rw [← succ_add]
 
 /-- (d) (Addition preserves order).  Compare with Mathlib's {name}`Nat.add_le_add_right`. -/
 theorem Nat.add_ge_add_right (a b c:Nat) : a ≥ b ↔ a + c ≥ b + c := by
-  sorry
+  constructor
+  . intro h1
+    rw [Nat.ge_iff_le, Nat.le_iff] at h1
+    rw [Nat.ge_iff_le, Nat.le_iff]
+    obtain ⟨x, h2⟩ := h1
+    use x
+    conv =>
+      lhs
+      rw [add_comm]
+    rw [add_assoc]
+    conv =>
+      rhs
+      rw [add_comm]
+    conv at h2 =>
+      rhs
+      rw [add_comm]
+    have h3 := add_term_when_eq a (x+b) c h2
+    rw [← add_assoc] at h3
+    exact h3
+  . intro h4
+    rw [Nat.ge_iff_le, Nat.le_iff] at h4
+    rw [Nat.ge_iff_le, Nat.le_iff]
+    obtain ⟨x, h5⟩ := h4
+    use x
+    rw [add_comm] at h5
+    conv at h5 =>
+      rhs
+      rw [add_assoc]
+      rw [add_comm]
+    rw [add_assoc] at h5
+    have h6 := add_left_cancel c a (x+b) h5
+    rw [add_comm] at h6
+    exact h6
+
 
 /-- (d) (Addition preserves order).  Compare with Mathlib's {name}`Nat.add_le_add_left`.  -/
 theorem Nat.add_ge_add_left (a b c:Nat) : a ≥ b ↔ c + a ≥ c + b := by
@@ -263,7 +402,42 @@ theorem Nat.add_le_add_left (a b c:Nat) : a ≤ b ↔ c + a ≤ c + b := add_ge_
 
 /-- (e) a < b iff a++ ≤ b.  Compare with Mathlib's {name}`Nat.succ_le_iff`. -/
 theorem Nat.lt_iff_succ_le (a b:Nat) : a < b ↔ a++ ≤ b := by
-  sorry
+  constructor
+  . intro h
+    rw [lt_iff] at h
+    rw [le_iff]
+    have h1 := And.left h
+    have h3 := And.right h
+    obtain ⟨x, h2⟩ := h1
+    use x.pred
+    by_cases hx : x = 0
+    . rw [hx, add_zero] at h2
+      rw [h2] at h3
+      contradiction
+    rw [← ne_eq] at hx
+    rw [succ_add, ← add_succ, succ_pred]
+    exact h2
+    exact hx
+  intro h
+  rw [le_iff] at h
+  rw [lt_iff]
+  obtain ⟨x, h4⟩ := h
+  rw [succ_add, ← add_succ, succ_eq_add_one] at h4
+  constructor
+  . use (x + 1)
+  by_contra h5
+  rw [h5] at h4
+  conv at h4 =>
+    lhs
+    rw [← add_zero b]
+  have h6 := add_left_cancel b 0 (x+1) h4
+  symm at h6
+  replace h6 := add_eq_zero x 1 h6
+  have h7 := And.right h6
+  contradiction
+
+
+
 
 /-- (f) a < b if and only if b = a + d for positive d. -/
 theorem Nat.lt_iff_add_pos (a b:Nat) : a < b ↔ ∃ d:Nat, d.IsPos ∧ b = a + d := by
@@ -422,4 +596,3 @@ theorem Nat.induction_from {n:Nat} {P: Nat → Prop} (hind: ∀ m, P m → P (m+
   sorry
 
 end Chapter2
-
