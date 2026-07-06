@@ -167,7 +167,16 @@ theorem Nat.add_mul (a b c: Nat) : (a + b)*c = a*c + b*c := by
 /-- Proposition 2.3.5 (Multiplication is associative) / Exercise 2.3.3
 Compare with Mathlib's {name}`Nat.mul_assoc` -/
 theorem Nat.mul_assoc (a b c: Nat) : (a * b) * c = a * (b * c) := by
-  sorry
+  revert a
+  apply induction
+  . rfl
+  . intro n ih
+    rw [succ_mul, add_mul, add_comm]
+    conv =>
+      rhs
+      rw [succ_mul, add_comm]
+    have h1 := add_left_add (b*c) (n * b * c) (n * (b * c)) ih
+    exact h1
 
 /-- (Not from textbook)  {name}`Nat` is a commutative semiring.
     This allows tactics such as {tactic}`ring` to apply to the Chapter 2 natural numbers. -/
@@ -229,9 +238,39 @@ lemma Nat.mul_cancel_right {a b c: Nat} (h: a * c = b * c) (hc: c.IsPos) : a = b
 /-- (Not from textbook) {name}`Nat` is an ordered semiring.
 This allows tactics such as {tactic}`gcongr` to apply to the Chapter 2 natural numbers. -/
 instance Nat.isOrderedRing : IsOrderedRing Nat where
-  zero_le_one := by sorry
-  mul_le_mul_of_nonneg_left := by sorry
-  mul_le_mul_of_nonneg_right := by sorry
+  zero_le_one := zero_le 1
+  mul_le_mul_of_nonneg_left := by
+    intro a h b c h1
+    by_cases h2 : a = 0
+    . subst a
+      rw [zero_mul]
+      apply zero_le
+    . rw [← ne_eq, ← isPos_iff] at h2
+      rw [le_iff_lt_or_eq] at h1
+      rcases h1 with h1 | h1
+      . have h3 :=  mul_lt_mul_of_pos_left h1 h2
+        rw [le_iff_lt_or_eq]
+        apply Or.inl h3
+      have h4 := congr(a * $h1)
+      rw [le_iff_lt_or_eq (a*b) (a*c)]
+      exact Or.inr h4
+  mul_le_mul_of_nonneg_right := by
+    intro a h b c h1
+    rw [le_iff_lt_or_eq] at h
+    rw [le_iff_lt_or_eq] at h1
+    rcases h with h | h
+    . rw [le_iff_lt_or_eq]
+      have h2 := (isPos_iff a).mpr ((ne_of_gt a 0) h)
+      rcases h1 with h1 | h1
+      . have h3 :=  mul_lt_mul_of_pos_right h1 h2
+        apply Or.inl h3
+      have h4 := congr($h1*a)
+      apply Or.inr h4
+    subst a
+    rw [mul_zero]
+    apply zero_le
+
+
 
 /-- This illustration of the {tactic}`gcongr` tactic is not from the
     textbook. -/
