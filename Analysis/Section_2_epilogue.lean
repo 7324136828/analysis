@@ -57,12 +57,30 @@ abbrev Chapter2.Nat.map_add : ∀ (n m : Nat), (n + m).toNat = n.toNat + m.toNat
   intro n m
   induction' n with n hn
   · rw [show zero = 0 from rfl, zero_add, _root_.Nat.zero_add]
-  sorry
+  have h1 :  n.toNat + m.toNat =  m.toNat + n.toNat := _root_.Nat.add_comm n.toNat m.toNat
+  rw [h1] at hn
+  conv =>
+    rhs
+    rw [succ_toNat, _root_.Nat.add_assoc, _root_.Nat.add_comm,  _root_.Nat.add_assoc, ← hn, _root_.Nat.add_comm]
+  have h2 : n++ + m = (n+m)++ := succ_add n m
+  rw [h2, succ_toNat]
+
+
+
 
 /-- The conversion preserves multiplication. -/
 abbrev Chapter2.Nat.map_mul : ∀ (n m : Nat), (n * m).toNat = n.toNat * m.toNat := by
   intro n m
-  sorry
+  induction' n with n hn
+  · rw [show zero = 0 from rfl, zero_mul, _root_.Nat.zero_mul]
+  conv =>
+    rhs
+    rw [succ_toNat, _root_.Nat.add_mul, ← hn, _root_.Nat.one_mul, ← Chapter2.Nat.map_add]
+
+
+
+
+
 
 /-- The conversion preserves order. -/
 abbrev Chapter2.Nat.map_le_map_iff : ∀ {n m : Nat}, n.toNat ≤ m.toNat ↔ n ≤ m := by
