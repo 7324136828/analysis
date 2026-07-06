@@ -76,16 +76,23 @@ abbrev Chapter2.Nat.map_mul : ∀ (n m : Nat), (n * m).toNat = n.toNat * m.toNat
   conv =>
     rhs
     rw [succ_toNat, _root_.Nat.add_mul, ← hn, _root_.Nat.one_mul, ← Chapter2.Nat.map_add]
-
-
-
-
+  rw [succ_mul]
 
 
 /-- The conversion preserves order. -/
 abbrev Chapter2.Nat.map_le_map_iff : ∀ {n m : Nat}, n.toNat ≤ m.toNat ↔ n ≤ m := by
   intro n m
+  induction' n with n hn
+  . rw [show zero = 0 from rfl]
+    constructor
+    . intro h
+      apply zero_le m
+    intro h
+    apply _root_.Nat.zero_le
+  constructor
+  . sorry
   sorry
+
 
 abbrev Chapter2.Nat.equivNat_ordered_ring : Chapter2.Nat ≃+*o ℕ where
   toEquiv := equivNat
