@@ -279,11 +279,76 @@ example (a b c d:Nat) (hab: a ≤ b) : c*a*d ≤ c*b*d := by
   . exact d.zero_le
   exact c.zero_le
 
+
+theorem Nat.positive_means_gt_zero (n:Nat):  n.IsPos ↔ n > 0 := by
+  constructor
+  . intro h
+    rw [isPos_iff] at h
+    simp
+    have h1 := n.zero_le
+    rw [le_iff_lt_or_eq] at h1
+    rcases h1 with h1 | h1
+    . exact h1
+    rw [h1] at h
+    contradiction
+  intro  h
+  simp at h
+  have h1 := ne_of_lt 0 n h
+  rw [isPos_iff]
+  by_contra h2
+  rw [h2] at h1
+  contradiction
+
+
+
 /-- Proposition 2.3.9 (Euclid's division lemma) / Exercise 2.3.5
 Compare with Mathlib's {name}`Nat.mod_eq_iff` -/
 theorem Nat.exists_div_mod (n:Nat) {q: Nat} (hq: q.IsPos) :
     ∃ m r: Nat, 0 ≤ r ∧ r < q ∧ n = m * q + r := by
-  sorry
+  revert n
+  have h1 := (positive_means_gt_zero q).mp hq
+  simp at h1
+  apply induction
+  . use 0
+    use 0
+    simp
+    exact h1
+  . intro n ih
+    obtain ⟨m, r, ⟨h4, ⟨h5, h6⟩⟩⟩ := ih
+    by_cases h3 : r++ = q
+    . use (m+1)
+      use 0
+      constructor
+      . exact zero_le 0
+      constructor
+      . exact h1
+      have h7 := congr($h6++)
+      rw [← add_succ, h3] at h7
+      have h8 := one_mul q
+      nth_rewrite 2 [← h8] at h7
+      rw [← add_mul] at h7
+      rw [add_zero]
+      exact h7
+    use m
+    use (r+1)
+    constructor
+    . exact zero_le (r+1)
+    constructor
+    . have h9 := (lt_iff_succ_le r q).mp h5
+      rw [le_iff_lt_or_eq] at h9
+      rcases h9 with h9 | h9
+      . rw [← one_add, add_comm] at h9
+        exact h9
+      contradiction
+    have h7 := congr($h6++)
+    rw [← add_succ] at h7
+    conv at h7 =>
+      rhs
+      rw [← one_add]
+    have h9 : 1 + r = r + 1 := add_comm 1 r
+    rw [h9] at h7
+    exact h7
+
 
 /-- Definition 2.3.11 (Exponentiation for natural numbers) -/
 abbrev Nat.pow (m n: Nat) : Nat := Nat.recurse (fun _ prod ↦ prod * m) 1 n
