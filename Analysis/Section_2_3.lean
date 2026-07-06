@@ -60,17 +60,63 @@ theorem Nat.two_mul (m: Nat) : 2 * m = 0 + m + m := by
 /-- This lemma will be useful to prove Lemma 2.3.2.
 Compare with Mathlib's {name}`Nat.mul_zero` -/
 lemma Nat.mul_zero (n: Nat) : n * 0 = 0 := by
-  sorry
+  revert n
+  apply induction
+  . apply zero_mul
+  intro n ih
+  rw [succ_mul, ih]
+  simp
 
 /-- This lemma will be useful to prove Lemma 2.3.2.
 Compare with Mathlib's {name}`Nat.mul_succ` -/
+
+theorem Nat.add_left_add (a b c:Nat) (habc:  b =  c) : a + b = a + c := by
+  revert a
+  apply induction
+  . rw [zero_add]
+    conv =>
+      rhs
+      rw [zero_add]
+    exact habc
+  intro n ih
+  rw [succ_add, ih , ← succ_add]
+
+
+
 lemma Nat.mul_succ (n m:Nat) : n * m++ = n * m + n := by
-  sorry
+  revert m n
+  apply induction
+  . intro m
+    rw [zero_mul, add_zero, zero_mul] at *
+  intro n ih c
+  have h1 : (n++) * (c++) =  n * (c++)  + (c++) := by
+    apply succ_mul
+  have h2 : (n++) * c = n * c + c := by
+    apply succ_mul
+  rw [h1, h2]
+  have h3 := ih c
+  rw [h3]
+  rw [add_assoc]
+  conv =>
+    rhs
+    rw [add_assoc]
+  have h4 := add_left_add (n * c) (n + c++) (c + n++)
+  have h5 : n + c++ = c + n++ := by
+    rw [add_succ, add_comm, ← add_succ]
+  have h6 := h4 h5
+  exact h6
+
+
 
 /-- Lemma 2.3.2 (Multiplication is commutative) / Exercise 2.3.1
 Compare with Mathlib's {name}`Nat.mul_comm` -/
 lemma Nat.mul_comm (n m: Nat) : n * m = m * n := by
-  sorry
+  revert n
+  apply induction
+  . rw [mul_zero, zero_mul]
+  intro n ih
+  rw [succ_mul, mul_succ, ih]
+
 
 /-- Compare with Mathlib's {name}`Nat.mul_one` -/
 theorem Nat.mul_one (m: Nat) : m * 1 = m := by
@@ -79,12 +125,28 @@ theorem Nat.mul_one (m: Nat) : m * 1 = m := by
 /-- This lemma will be useful to prove Lemma 2.3.3.
 Compare with Mathlib's {name}`Nat.mul_pos` -/
 lemma Nat.pos_mul_pos {n m: Nat} (h₁: n.IsPos) (h₂: m.IsPos) : (n * m).IsPos := by
-  sorry
+  have h3 := succ_pred n h₁
+  rw [← h3, succ_mul]
+  have h4 := add_pos_left (n.pred * m) h₂
+  rw [add_comm] at h4
+  exact h4
 
 /-- Lemma 2.3.3 (Positive natural numbers have no zero divisors) / Exercise 2.3.2.
     Compare with Mathlib's {name}`Nat.mul_eq_zero`.  -/
 lemma Nat.mul_eq_zero (n m: Nat) : n * m = 0 ↔ n = 0 ∨ m = 0 := by
-  sorry
+  constructor
+  . contrapose
+    intro h
+    rw [not_or] at h
+    obtain ⟨h1, h2⟩ := h
+    rw [← ne_eq] at *
+    rw [← isPos_iff] at *
+    have h3 := pos_mul_pos h1 h2
+    exact h3
+  intro h
+  rcases h with h | h
+  . rw [h, zero_mul]
+  . rw [h, mul_zero]
 
 /-- Proposition 2.3.4 (Distributive law)
 Compare with Mathlib's {name}`Nat.mul_add` -/
