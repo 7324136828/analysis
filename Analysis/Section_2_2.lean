@@ -608,20 +608,22 @@ instance Nat.instLinearOrder : LinearOrder Nat where
   le_trans a b c hab hbc := ge_trans hbc hab
   lt_iff_le_not_ge a b := by
     constructor
-    . intro h; refine ⟨ le_of_lt h, ?_ ⟩
-      by_contra h'
-      exact not_lt_self (lt_of_le_of_lt h' h)
-    rintro ⟨ h1, h2 ⟩
-    rw [lt_iff, ←le_iff]; refine ⟨ h1, ?_ ⟩
-    by_contra h
-    subst h
-    contradiction
+    . intro h1
+      refine ⟨le_of_lt   h1, ?_ ⟩
+      by_contra h2
+      have h3 := not_lt_self (lt_of_le_of_lt h2 h1)
+      contradiction
+    intro h4
+    obtain ⟨h5, h6⟩ := h4
+    have h7 := ((gt_iff_not_le b a).mpr h6)
+    rw [gt_iff_lt] at h7
+    exact h7
   le_antisymm a b hab hba := ge_antisymm hba hab
   le_total a b := by
-    obtain h | rfl | h := trichotomous a b
-    . left; exact le_of_lt h
-    . simp [ge_refl]
-    . right; exact le_of_lt h
+    by_cases h : a ≤ b
+    . left; exact h
+    right
+    exact le_of_lt ((gt_iff_lt a b).mpr ((gt_iff_not_le a b).mpr h))
   toDecidableLE := decidableRel
 
 /-- This illustration of the {tactic}`order` tactic is not from the
@@ -655,22 +657,172 @@ example (a b c d e:Nat) (hab: a ≤ b) (hbc: b < c) (hde: d < e) :
 /-- Proposition 2.2.14 (Strong principle of induction) / Exercise 2.2.5
     Compare with Mathlib's {name}`Nat.strong_induction_on`.
 -/
+
+theorem Nat.zero_is_zero : 0 = zero := by rfl
+
+theorem Nat.succ_lt_iff_le {b a:Nat}: b < a++ ↔ b ≤ a := by
+  rw [lt_iff_succ_le]
+  have h1 := succ_eq_add_one b
+  have h2 := succ_eq_add_one a
+  rw [ h1,  h2]
+  have h3 := add_ge_add_right a b 1
+  have h4 := h3.symm
+  simp at h4
+  exact h4
+
+theorem Nat.not_lt_iff_le {a b: Nat}:  ¬a < b ↔ b ≤ a := by
+  contrapose
+  have h := gt_iff_not_le b a
+  simp
+
+-- trichotomous
+theorem Nat.le_and_ge_iff_eq {a : Nat} {b: Nat}: a ≤ b ∧ b ≤ a ↔ a = b := by
+  constructor
+  . intro h
+    obtain ⟨h1, h2⟩ := h
+    rw [← not_lt_iff_le] at h1
+    rw [← not_lt_iff_le] at h2
+    have h3 := trichotomous a b
+    obtain h31 | h32 | h33 := h3
+    . contradiction
+    . exact h32
+    . contradiction
+  intro h
+  constructor
+  . rw [le_iff_lt_or_eq]
+    exact Or.inr h
+  . rw [le_iff_lt_or_eq]
+    exact Or.inr h.symm
+
+theorem Nat.strong_induction_prelude {m₀:Nat} {P: Nat → Prop}
+  (hind: ∀ b, 0 ≤ b → (∀ a, 0 ≤ a ∧ a < b → P (m₀ + a)) → P (m₀ + b)) :
+    ∀ b, 0 ≤ b → P (m₀ + b) := by
+      suffices sh : ∀ n, ∀ a, 0 ≤ a ∧ a < n → P (m₀ + a)
+      apply induction
+      . intro h
+        have h1 := hind 0
+        simp at h1
+        have h2 := add_zero m₀
+        rw [h2]
+        exact h1
+      intro n
+      intro h3
+      intro h4
+      exact hind (n++) h4 (sh (n++))
+      apply induction
+      . intro a h
+        obtain ⟨h1, h2⟩ := h
+        have h3 := lt_of_le_of_lt h1 h2
+        contradiction
+      intro n h1 a h2
+      obtain ⟨ h3, h4⟩ := h2
+      have h5 := lt_of_le_of_lt h3 h4
+      rw [succ_lt_iff_le] at h5
+      have h6 := hind n h5
+      by_cases h7 : a = n
+      . have h8 := h6 h1
+        subst a
+        exact h8
+      have h9 : a < n := by
+        by_contra h10
+        rw [not_lt_iff_le] at h10
+        rw [succ_lt_iff_le] at h4
+        have h11 := And.intro h4 h10
+        rw [le_and_ge_iff_eq] at h11
+        contradiction
+      have h10 := And.intro h3 h9
+      exact h1 a h10
+
+theorem Nat.add_gt_add_left (a b c:Nat) : a > b ↔ c + a > c + b := by
+  contrapose
+  simp
+  exact add_le_add_left a b c
+
+theorem Nat.add_lt_add_left (a b c:Nat) : a < b ↔ c + a < c + b := add_gt_add_left _ _ _
+
+
 theorem Nat.strong_induction {m₀:Nat} {P: Nat → Prop}
   (hind: ∀ m, m ≥ m₀ → (∀ m', m₀ ≤ m' ∧ m' < m → P m') → P m) :
     ∀ m, m ≥ m₀ → P m := by
-  sorry
+  intro m h
+  have h1 : (∀ b, 0 ≤ b → (∀ a, 0 ≤ a ∧ a < b → P (m₀ + a)) → P (m₀ + b)) := by
+    intro b h2 h3
+    have h4 := hind (m₀ + b)
+    simp at h4
+    simp at h3
+    rw [add_le_add_left 0 b m₀, add_zero] at h2
+    replace h4 := h4 h2
+    have h5 :  ∀ (m' : Nat), m₀ ≤ m' → m' < m₀ + b → P m' := by
+      intro m' h5 h6
+      obtain ⟨a, ha⟩ := (le_iff m₀ m').mp h5
+      have hab : a < b := by
+        rw [ha, ← add_lt_add_left] at h6
+        exact h6
+      have hP := h3 a (Nat.zero_le _) hab
+      rw [← ha] at hP
+      exact hP
+    have h6 := h4 h5
+    exact h6
+  have h2 := strong_induction_prelude h1
+  simp at h
+  obtain ⟨a, ha⟩ := (le_iff m₀ m).mp h
+  have h3 := zero_le a
+  have h4 := h2 a h3
+  rw [← ha] at h4
+  exact h4
+
+
 
 /-- Exercise 2.2.6 (backwards induction)
     Compare with Mathlib's {name}`Nat.decreasingInduction`. -/
 theorem Nat.backwards_induction {n:Nat} {P: Nat → Prop}
   (hind: ∀ m, P (m++) → P m) (hn: P n) :
     ∀ m, m ≤ n → P m := by
-  sorry
+  suffices sh : ∀ a :Nat, ∀ n:Nat, P (n + a) → P (n)
+  intro m h
+  obtain ⟨a, ha⟩ := (le_iff m n).mp h
+  have hb := sh a m
+  rw [← ha] at hb
+  replace hb := hb hn
+  exact hb
+  apply induction
+  . intro c h
+    simp at h
+    exact h
+  intro c ih d h1
+  have h2 := ih (d + 1)
+  rw [← one_add,← add_assoc] at h1
+  replace h2 := h2 h1
+  rw [add_comm, one_add] at h2
+  exact (hind d) h2
+
+
 
 /-- Exercise 2.2.7 (induction from a starting point)
     Compare with Mathlib's {name}`Nat.le_induction`. -/
 theorem Nat.induction_from {n:Nat} {P: Nat → Prop} (hind: ∀ m, P m → P (m++)) :
     P n → ∀ m, m ≥ n → P m := by
-  sorry
+  suffices sh : ∀ a :Nat, ∀ n:Nat,  P (n) → P (n + a)
+  intro h m h1
+  simp at h1
+  obtain ⟨a, ha⟩ := (le_iff n m).mp h1
+  have h2 := (sh a n) h
+  rw [← ha] at h2
+  exact h2
+  apply induction
+  . intro n h1
+    simp
+    exact h1
+  . intro m ih w h1
+    have h2 := (ih w) h1
+    have h3 := (hind (w+m)) h2
+    rw [← one_add,  ← add_assoc]
+    rw [← one_add, ← add_assoc] at h3
+    rw [add_comm, ← add_assoc, add_comm]
+    have h4 : w + m = m + w := by
+      rw [add_comm]
+    rw  [← h4, ← add_assoc]
+    exact h3
+
 
 end Chapter2
