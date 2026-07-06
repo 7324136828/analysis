@@ -378,6 +378,26 @@ theorem Nat.pow_one (m: Nat) : m ^ (1:Nat) = m := by
 /-- Exercise 2.3.4-/
 theorem Nat.sq_add_eq (a b: Nat) :
     (a + b) ^ (2 : Nat) = a ^ (2 : Nat) + 2 * a * b + b ^ (2 : Nat) := by
-  sorry
+  have h: 2 = 1++ := by rfl
+  have h1 : (a + b) ^ (2 : Nat) = (a + b) ^ (2 : Nat) := by rfl
+  conv at h1 =>
+    rhs
+    rw [h, pow_succ, pow_one, add_mul, mul_add, mul_add, add_assoc]
+  nth_rewrite 2 [← add_assoc] at h1
+  have h2 : a * b = b * a := mul_comm a b
+  rw [← h2] at h1
+  have h3 : a * b + a * b = 2 * (a * b) := two_mul (a*b)
+  rw [← mul_assoc] at h3
+  have h4 : ∀x:Nat, x * x = x ^ (2 : Nat) := by
+    intro x
+    apply pow_one
+  rw [h3] at h1
+  have h5 := h4 a
+  have h6 := h4 b
+  rw [h5] at h1
+  rw [h6] at h1
+  rw [← add_assoc] at h1
+  exact h1
+
 
 end Chapter2
