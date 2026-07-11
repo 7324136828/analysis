@@ -706,43 +706,140 @@ theorem SetTheory.Set.mem_sdiff (x:Object) (X Y:Set) : x ∈ (X \ Y) ↔ (x ∈ 
   intro ⟨ hX, hY ⟩; exact (specification_axiom' (fun x ↦ x.val ∉ Y) ⟨ x, hX⟩ ).mpr hY
 
 /-- Proposition 3.1.27(d) / Exercise 3.1.6 -/
-theorem SetTheory.Set.inter_comm (A B:Set) : A ∩ B = B ∩ A := by sorry
+theorem SetTheory.Set.inter_comm (A B:Set) : A ∩ B = B ∩ A := by
+  ext x
+  simp [And.comm]
 
 /-- Proposition 3.1.27(b) -/
-theorem SetTheory.Set.subset_union {A X: Set} (hAX: A ⊆ X) : A ∪ X = X := by sorry
+theorem SetTheory.Set.subset_union {A X: Set} (hAX: A ⊆ X) : A ∪ X = X := by
+  ext x
+  simp
+  rw [SetTheory.Set.subset_def] at hAX
+  exact hAX x
+
 
 /-- Proposition 3.1.27(b) -/
-theorem SetTheory.Set.union_subset {A X: Set} (hAX: A ⊆ X) : X ∪ A = X := by sorry
+theorem SetTheory.Set.union_subset {A X: Set} (hAX: A ⊆ X) : X ∪ A = X := by
+  ext x
+  simp
+  rw [SetTheory.Set.subset_def] at hAX
+  exact hAX x
 
 /-- Proposition 3.1.27(c) -/
 @[simp]
 theorem SetTheory.Set.inter_self (A:Set) : A ∩ A = A := by
-  sorry
+  ext x
+  simp
 
 /-- Proposition 3.1.27(e) -/
-theorem SetTheory.Set.inter_assoc (A B C:Set) : (A ∩ B) ∩ C = A ∩ (B ∩ C) := by sorry
+theorem SetTheory.Set.inter_assoc (A B C:Set) : (A ∩ B) ∩ C = A ∩ (B ∩ C) := by
+  ext x
+  simp
+  constructor
+  . intro h
+    obtain ⟨h4, h3⟩ := h
+    obtain ⟨h1, h2⟩ := h4
+    have h5 := And.intro h2 h3
+    exact And.intro h1 h5
+  intro h
+  obtain ⟨h1, h4⟩ := h
+  obtain ⟨h2, h3⟩ := h4
+  have h5 := And.intro h1 h2
+  exact And.intro h5 h3
 
 /-- Proposition 3.1.27(f) -/
 theorem  SetTheory.Set.inter_union_distrib_left (A B C:Set) :
     A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C) := by
-  sorry
+  ext x
+  simp
+  constructor
+  . intro h
+    obtain ⟨h1, h2⟩ := h
+    rcases h2 with h2 | h2
+    . have h3 := And.intro h1 h2
+      exact Or.inl h3
+    have h3 := And.intro h1 h2
+    exact Or.inr h3
+  intro h
+  rcases h with h | h
+  obtain ⟨h1, h2⟩ := h
+  exact And.intro h1 (Or.inl h2)
+  obtain ⟨h1, h2⟩ := h
+  exact And.intro h1 (Or.inr h2)
 
 /-- Proposition 3.1.27(f) -/
 theorem  SetTheory.Set.union_inter_distrib_left (A B C:Set) :
     A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C) := by
-  sorry
+  ext x
+  simp
+  constructor
+  . intro h
+    rcases h with h | h
+    . exact And.intro (Or.inl h) (Or.inl h)
+    obtain ⟨h1, h2⟩ := h
+    exact And.intro (Or.inr h1) (Or.inr h2)
+  intro h
+  obtain ⟨h1,h2⟩ := h
+  by_cases h3 : x ∈ A
+  exact Or.inl h3
+  . simp only [h3] at h1
+    simp at h1
+    simp only [h3] at h2
+    simp at h2
+    exact Or.inr (And.intro h1 h2)
 
 /-- Proposition 3.1.27(f) -/
-theorem SetTheory.Set.union_compl {A X:Set} (hAX: A ⊆ X) : A ∪ (X \ A) = X := by sorry
+theorem SetTheory.Set.union_compl {A X:Set} (hAX: A ⊆ X) : A ∪ (X \ A) = X := by
+  ext x
+  simp at *
+  rw [SetTheory.Set.subset_def] at hAX
+  have h1 := hAX x
+  constructor
+  . intro h
+    rcases h with h | h
+    . exact h1 h
+    obtain ⟨h2, h3⟩ := h
+    exact h2
+  intro h
+  by_cases h4 : x ∈ A
+  exact Or.inl h4
+  exact Or.inr (And.intro h h4)
 
 /-- Proposition 3.1.27(f) -/
-theorem SetTheory.Set.inter_compl {A X:Set} : A ∩ (X \ A) = ∅ := by sorry
+theorem SetTheory.Set.inter_compl {A X:Set} : A ∩ (X \ A) = ∅ := by
+  ext x
+  simp
+  intro h1 h2
+  exact h1
 
 /-- Proposition 3.1.27(g) -/
-theorem SetTheory.Set.compl_union {A B X:Set} : X \ (A ∪ B) = (X \ A) ∩ (X \ B) := by sorry
+theorem SetTheory.Set.compl_union {A B X:Set} : X \ (A ∪ B) = (X \ A) ∩ (X \ B) := by
+  ext x
+  simp
+  constructor
+  . simp
+    intro h1 h2 h3
+    exact And.intro (And.intro h1 h2) (And.intro h1 h3)
+  simp
+  intro h1 h2 h3 h4
+  tauto
 
 /-- Proposition 3.1.27(g) -/
-theorem SetTheory.Set.compl_inter {A B X:Set} : X \ (A ∩ B) = (X \ A) ∪ (X \ B) := by sorry
+theorem SetTheory.Set.compl_inter {A B X:Set} : X \ (A ∩ B) = (X \ A) ∪ (X \ B) := by
+  ext x
+  simp
+  constructor
+  . simp
+    intro h1 h2
+    by_cases h : x ∈ A
+    . have h3 := h2 h
+      tauto
+    tauto
+  intro h1
+  rw [imp_iff_not_or]
+  rcases h1 with h1 | h1
+  . tauto
+  tauto
 
 /-- Not from textbook: sets form a distributive lattice. -/
 instance SetTheory.Set.instDistribLattice : DistribLattice Set where
