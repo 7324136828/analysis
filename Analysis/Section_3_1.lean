@@ -648,12 +648,34 @@ theorem SetTheory.Set.specification_axiom'' {A:Set} (P: A → Prop) (x:Object) :
   intro ⟨ h, hP ⟩
   simpa [←specification_axiom' P] using hP
 
-theorem SetTheory.Set.specify_subset {A:Set} (P: A → Prop) : A.specify P ⊆ A := by sorry
+theorem SetTheory.Set.specify_subset {A:Set} (P: A → Prop) : A.specify P ⊆ A := by
+  rw [SetTheory.Set.subset_def]
+  intro x h
+  use specification_axiom h
 
 /-- This exercise may require some understanding of how subtypes are implemented in Lean. -/
 theorem SetTheory.Set.specify_congr {A A':Set} (hAA':A = A') {P: A → Prop} {P': A' → Prop}
   (hPP': (x:Object) → (h:x ∈ A) → (h':x ∈ A') → P ⟨ x, h⟩ ↔ P' ⟨ x, h'⟩ ) :
-    A.specify P = A'.specify P' := by sorry
+    A.specify P = A'.specify P' := by
+    ext x
+    constructor
+    . intro claim1
+      have claim2 := (SetTheory.Set.specification_axiom'' P x).mp claim1
+      obtain ⟨h, claim3⟩ := claim2
+      have h' := h
+      rw [hAA'] at h'
+      have claim4 := (hPP' x h h').mp claim3
+      have claim5 := (SetTheory.Set.specification_axiom'' P' x).mpr ⟨h', claim4⟩
+      exact claim5
+    intro claim1
+    have claim2 := (SetTheory.Set.specification_axiom'' P' x).mp claim1
+    obtain ⟨h', claim3⟩ := claim2
+    have h := h'
+    rw [← hAA'] at h
+    have claim4 := (hPP' x h h').mpr claim3
+    have claim5 := (SetTheory.Set.specification_axiom'' P x).mpr ⟨h, claim4⟩
+    exact claim5
+
 
 instance SetTheory.Set.instIntersection : Inter Set where
   inter X Y := X.specify (fun x ↦ x.val ∈ Y)
