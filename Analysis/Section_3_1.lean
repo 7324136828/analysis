@@ -554,12 +554,28 @@ theorem SetTheory.Set.subset_trans {A B C:Set} (hAB:A ⊆ B) (hBC:B ⊆ C) : A �
 
 /-- Proposition 3.1.17 (Partial ordering by set inclusion) -/
 theorem SetTheory.Set.subset_antisymm (A B:Set) (hAB:A ⊆ B) (hBA:B ⊆ A) : A = B := by
-  sorry
+  ext x
+  rw [subset_def] at *
+  constructor
+  . intro h
+    exact hAB x h
+  intro h
+  exact hBA x h
 
 /-- Proposition 3.1.17 (Partial ordering by set inclusion) -/
 theorem SetTheory.Set.ssubset_trans (A B C:Set) (hAB:A ⊂ B) (hBC:B ⊂ C) : A ⊂ C := by
-  sorry
-
+  rw [ssubset_def] at *
+  constructor
+  . replace hAB := And.left hAB
+    replace hBC := And.left hBC
+    exact subset_trans hAB hBC
+  by_contra h
+  rw [h] at hAB
+  have h1 := And.left hAB
+  have h2 := And.left hBC
+  have h3 := (SetTheory.Set.subset_antisymm C B h1 h2).symm
+  have h4 := And.right hBC
+  contradiction
 
 /--
   This defines the subtype {lean}`A.toSubtype` for any {lean}`A:Set`.
