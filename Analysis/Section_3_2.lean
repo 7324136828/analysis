@@ -69,7 +69,7 @@ theorem SetTheory.Set.axiom_of_regularity {A:Set} (h: A ≠ ∅) :
 theorem SetTheory.Set.emptyset_exists (h: axiom_of_universal_specification):
     ∃ (X:Set), ∀ x, x ∉ X := by
   rw [axiom_of_universal_specification] at h
-  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ (∀ x, x ∉ z))
+  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ ((∀ x, x ∉ z) ∨ (y ∉ z)))
   choose a ha using h P
   by_cases h1 : (set_to_object a) ∈ a
   . have hb := (ha a).mp h1
@@ -77,26 +77,17 @@ theorem SetTheory.Set.emptyset_exists (h: axiom_of_universal_specification):
     simp at hz_eq
     rw [←hz_eq] at hz_not_mem
     use a
+    rcases hz_not_mem with hy | hy
+    . exact hy
+    contradiction
   replace ha := (not_congr (ha a)).mp h1
   dsimp [P] at ha
   push_neg at ha
   replace ha := ha a
   simp at ha
   use a
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  obtain ⟨ h3, h4 ⟩ := ha
+  contradiction
 
 /--
   Exercise 3.2.1.  The spirit of the exercise is to establish these results without using either
@@ -104,7 +95,26 @@ theorem SetTheory.Set.emptyset_exists (h: axiom_of_universal_specification):
 -/
 theorem SetTheory.Set.singleton_exists (h: axiom_of_universal_specification) (x:Object):
     ∃ (X:Set), ∀ y, y ∈ X ↔ y = x := by
-  sorry
+  rw [axiom_of_universal_specification] at h
+  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ ((∀ y, y ∈ z ↔ y = x) ∨ (y ∉ z)))
+  choose a ha using h P
+  by_cases h1 : (set_to_object a) ∈ a
+  . have hb := (ha a).mp h1
+    obtain ⟨z, hz_eq, hz_not_mem⟩ := hb
+    simp at hz_eq
+    rw [←hz_eq] at hz_not_mem
+    use a
+    rcases hz_not_mem with hy | hy
+    . exact hy
+    contradiction
+  use a
+  replace ha := (not_congr (ha a)).mp h1
+  dsimp [P] at ha
+  push_neg at ha
+  replace ha := ha a
+  simp at ha
+  obtain ⟨ h3, h4 ⟩ := ha
+  contradiction
 
 /--
   Exercise 3.2.1.  The spirit of the exercise is to establish these results without using either
