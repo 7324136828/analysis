@@ -122,7 +122,26 @@ theorem SetTheory.Set.singleton_exists (h: axiom_of_universal_specification) (x:
 -/
 theorem SetTheory.Set.pair_exists (h: axiom_of_universal_specification) (x₁ x₂:Object):
     ∃ (X:Set), ∀ y, y ∈ X ↔ y = x₁ ∨ y = x₂ := by
-  sorry
+  rw [axiom_of_universal_specification] at h
+  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ ((∀ y, y ∈ z ↔ y = x₁ ∨ y = x₂) ∨ (y ∉ z)))
+  choose a ha using h P
+  by_cases h1 : (set_to_object a) ∈ a
+  . have hb := (ha a).mp h1
+    obtain ⟨z, hz_eq, hz_not_mem⟩ := hb
+    simp at hz_eq
+    rw [←hz_eq] at hz_not_mem
+    use a
+    rcases hz_not_mem with hy | hy
+    . exact hy
+    contradiction
+  use a
+  replace ha := (not_congr (ha a)).mp h1
+  dsimp [P] at ha
+  push_neg at ha
+  replace ha := ha a
+  simp at ha
+  obtain ⟨ h3, h4 ⟩ := ha
+  contradiction
 
 /--
   Exercise 3.2.1. The spirit of the exercise is to establish these results without using either
@@ -130,15 +149,52 @@ theorem SetTheory.Set.pair_exists (h: axiom_of_universal_specification) (x₁ x�
 -/
 theorem SetTheory.Set.union_exists (h: axiom_of_universal_specification) (A B:Set):
     ∃ (Z:Set), ∀ z, z ∈ Z ↔ z ∈ A ∨ z ∈ B := by
-  sorry
-
+  rw [axiom_of_universal_specification] at h
+  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ ((∀ w, w ∈ z ↔ w ∈ A ∨ w ∈ B) ∨ (y ∉ z)))
+  choose a ha using h P
+  by_cases h1 : (set_to_object a) ∈ a
+  . have hb := (ha a).mp h1
+    obtain ⟨z, hz_eq, hz_not_mem⟩ := hb
+    simp at hz_eq
+    rw [←hz_eq] at hz_not_mem
+    use a
+    rcases hz_not_mem with hy | hy
+    . exact hy
+    contradiction
+  use a
+  replace ha := (not_congr (ha a)).mp h1
+  dsimp [P] at ha
+  push_neg at ha
+  replace ha := ha a
+  simp at ha
+  obtain ⟨ h3, h4 ⟩ := ha
+  contradiction
 /--
   Exercise 3.2.1. The spirit of the exercise is to establish these results without using either
   Russell's paradox, or the specify operation.
 -/
 theorem SetTheory.Set.specify_exists (h: axiom_of_universal_specification) (A:Set) (P: A → Prop):
     ∃ (Z:Set), ∀ z, z ∈ Z ↔ ∃ h : z ∈ A, P ⟨ z, h ⟩ := by
-  sorry
+  rw [axiom_of_universal_specification] at h
+  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ ((∀ w, w ∈ z ↔ ∃ h : w ∈ A, P ⟨ w, h ⟩) ∨ (y ∉ z)))
+  choose a ha using h P
+  by_cases h1 : (set_to_object a) ∈ a
+  . have hb := (ha a).mp h1
+    obtain ⟨z, hz_eq, hz_not_mem⟩ := hb
+    simp at hz_eq
+    rw [←hz_eq] at hz_not_mem
+    use a
+    rcases hz_not_mem with hy | hy
+    . exact hy
+    contradiction
+  use a
+  replace ha := (not_congr (ha a)).mp h1
+  dsimp [P] at ha
+  push_neg at ha
+  replace ha := ha a
+  simp at ha
+  obtain ⟨ h3, h4 ⟩ := ha
+  contradiction
 
 /--
   Exercise 3.2.1. The spirit of the exercise is to establish these results without using either
@@ -147,7 +203,26 @@ theorem SetTheory.Set.specify_exists (h: axiom_of_universal_specification) (A:Se
 theorem SetTheory.Set.replace_exists (h: axiom_of_universal_specification) (A:Set)
   (P: A → Object → Prop) (hP: ∀ x y y', P x y ∧ P x y' → y = y') :
     ∃ (Z:Set), ∀ y, y ∈ Z ↔ ∃ a : A, P a y := by
-  sorry
+  rw [axiom_of_universal_specification] at h
+  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ ((∀ y, y ∈ z ↔ ∃ a : A, P a y) ∨ (y ∉ z)))
+  choose a ha using h P
+  by_cases h1 : (set_to_object a) ∈ a
+  . have hb := (ha a).mp h1
+    obtain ⟨z, hz_eq, hz_not_mem⟩ := hb
+    simp at hz_eq
+    rw [←hz_eq] at hz_not_mem
+    use a
+    rcases hz_not_mem with hy | hy
+    . exact hy
+    contradiction
+  use a
+  replace ha := (not_congr (ha a)).mp h1
+  dsimp [P] at ha
+  push_neg at ha
+  replace ha := ha a
+  simp at ha
+  obtain ⟨ h3, h4 ⟩ := ha
+  contradiction
 
 /-- Exercise 3.2.2 -/
 theorem SetTheory.Set.not_mem_self (A:Set) : (A:Object) ∉ A := by sorry
