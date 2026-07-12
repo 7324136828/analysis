@@ -1530,38 +1530,112 @@ theorem SetTheory.Set.mem_coe (X:Set) (x:Object) : x ∈ (X : _root_.Set Object)
   simp
 
 /-- Compatibility of the emptyset -/
-theorem SetTheory.Set.coe_empty : ((∅:Set) : _root_.Set Object) = ∅ := by sorry
+theorem SetTheory.Set.coe_empty : ((∅:Set) : _root_.Set Object) = ∅ := by simp
 
 /-- Compatibility of subset -/
 theorem SetTheory.Set.coe_subset (X Y:Set) :
-    (X : _root_.Set Object) ⊆ (Y : _root_.Set Object) ↔ X ⊆ Y := by sorry
+    (X : _root_.Set Object) ⊆ (Y : _root_.Set Object) ↔ X ⊆ Y := by
+      simp
+      rw [subset_def]
 
 theorem SetTheory.Set.coe_ssubset (X Y:Set) :
-    (X : _root_.Set Object) ⊂ (Y : _root_.Set Object) ↔ X ⊂ Y := by sorry
+    (X : _root_.Set Object) ⊂ (Y : _root_.Set Object) ↔ X ⊂ Y := by
+      constructor
+      . intro h
+        rw [_root_.Set.ssubset_def] at h
+        simp at h
+        have ⟨h3,h4⟩ := h
+        obtain ⟨y,h6⟩ := h4
+        obtain ⟨h7,h8⟩ := h6
+        constructor
+        . intro x h1
+          exact h3 x h1
+        by_contra h5
+        rw [← h5] at h7
+        contradiction
+      intro ⟨h1, h2⟩
+      rw [_root_.Set.ssubset_def]
+      constructor
+      . exact (Set.coe_subset X Y).mpr h1
+      by_contra h3
+      simp at h3
+      rw [subset_def] at h1
+      have h4 : X = Y := by
+        ext y
+        constructor
+        . intro h
+          exact h1 y h
+        intro h
+        exact h3 y h
+      contradiction
 
 /-- Compatibility of singleton -/
-theorem SetTheory.Set.coe_singleton (x: Object) : (({x}:Set) : _root_.Set Object) = {x} := by sorry
+theorem SetTheory.Set.coe_singleton (x: Object) : (({x}:Set) : _root_.Set Object) = {x} := by simp
 
 /-- Compatibility of union -/
 theorem SetTheory.Set.coe_union (X Y: Set) :
-    ((X ∪ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∪ (Y : _root_.Set Object) := by sorry
+    ((X ∪ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∪ (Y : _root_.Set Object) := by
+    ext x
+    simp
 
 /-- Compatibility of pair -/
-theorem SetTheory.Set.coe_pair (x y: Object) : (({x, y}:Set) : _root_.Set Object) = {x, y} := by sorry
+theorem SetTheory.Set.coe_pair (x y: Object) : (({x, y}:Set) : _root_.Set Object) = {x, y} := by
+    ext z
+    simp
 
 /-- Compatibility of subtype -/
-theorem SetTheory.Set.coe_subtype (X: Set) :  (X : _root_.Set Object) = X.toSubtype := by sorry
+theorem SetTheory.Set.coe_subtype (X: Set) :  (X : _root_.Set Object) = X.toSubtype := by  simp
 
 /-- Compatibility of intersection -/
 theorem SetTheory.Set.coe_intersection (X Y: Set) :
-    ((X ∩ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∩ (Y : _root_.Set Object) := by sorry
+    ((X ∩ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∩ (Y : _root_.Set Object) := by
+      ext z
+      simp
 
 /-- Compatibility of set difference-/
 theorem SetTheory.Set.coe_diff (X Y: Set) :
-    ((X \ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) \ (Y : _root_.Set Object) := by sorry
+    ((X \ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) \ (Y : _root_.Set Object) := by
+      ext z
+      simp
 
 /-- Compatibility of disjointness -/
 theorem SetTheory.Set.coe_Disjoint (X Y: Set) :
-    Disjoint (X : _root_.Set Object) (Y : _root_.Set Object) ↔ Disjoint X Y := by sorry
+    Disjoint (X : _root_.Set Object) (Y : _root_.Set Object) ↔ Disjoint X Y := by
+      unfold Disjoint
+      simp
+      constructor
+      . intro h1 x h3 h4
+        change x = ∅
+        change x ⊆ X at h3
+        change x ⊆ Y at h4
+        replace h3 := (coe_subset x X).mpr h3
+        replace h4 := (coe_subset x Y).mpr h4
+        have h5 := h1 h3 h4
+        rw [← coe_empty] at h5
+        exact (coe_inj' x ∅).mp h5
+      intro h1 x h2 h3
+      simp at h1
+      ext y
+      simp
+      by_contra h4
+      have h5 : (({y}:Set) : _root_.Set Object) ⊆  x := by
+        simp
+        exact h4
+      replace h2 :  (({y}:Set) : _root_.Set Object) ⊆ ((X:Set) : _root_.Set Object) := by
+        rw [_root_.Set.subset_def] at *
+        intro z h6
+        exact h2 z (h5 z h6)
+      replace h3 :  (({y}:Set) : _root_.Set Object) ⊆ ((Y:Set) : _root_.Set Object) := by
+        rw [_root_.Set.subset_def] at *
+        intro z h6
+        exact h3 z (h5 z h6)
+      simp only [coe_subset] at h2
+      simp only [coe_subset] at h3
+      have h6 := h1 h2 h3
+      change ({y}:Set) = ∅ at h6
+      have h7 : y ∈ ({y}:Set) := by simp
+      rw [h6] at h7
+      exact absurd h7 (by apply not_mem_empty y)
+
 
 end Chapter3
