@@ -56,7 +56,8 @@ theorem SetTheory.Set.axiom_of_regularity {A:Set} (h: A ≠ ∅) :
     ∃ x:A, ∀ S:Set, x.val = S → Disjoint S A := by
   choose x h h' using regularity_axiom A (nonempty_def h)
   use ⟨x, h⟩
-  intro S hS; specialize h' S hS
+  intro S hS;
+  specialize h' S hS
   rw [disjoint_iff, eq_empty_iff_forall_notMem]
   contrapose! h'; simp at h'
   aesop
@@ -67,7 +68,35 @@ theorem SetTheory.Set.axiom_of_regularity {A:Set} (h: A ≠ ∅) :
 -/
 theorem SetTheory.Set.emptyset_exists (h: axiom_of_universal_specification):
     ∃ (X:Set), ∀ x, x ∉ X := by
-  sorry
+  rw [axiom_of_universal_specification] at h
+  set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ (∀ x, x ∉ z))
+  choose a ha using h P
+  by_cases h1 : (set_to_object a) ∈ a
+  . have hb := (ha a).mp h1
+    obtain ⟨z, hz_eq, hz_not_mem⟩ := hb
+    simp at hz_eq
+    rw [←hz_eq] at hz_not_mem
+    use a
+  replace ha := (not_congr (ha a)).mp h1
+  dsimp [P] at ha
+  push_neg at ha
+  replace ha := ha a
+  simp at ha
+  use a
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /--
   Exercise 3.2.1.  The spirit of the exercise is to establish these results without using either
