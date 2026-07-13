@@ -333,7 +333,7 @@ theorem SetTheory.Set.univ_iff : axiom_of_universal_specification ↔
 
 
 /-- Exercise 3.2.3 -/
-theorem SetTheory.Set.no_univ : ¬ ∃ (U:Set), ∀ (x:Object), x ∈ U := by sorry
-
+theorem SetTheory.Set.no_univ : ¬ ∃ (U:Set), ∀ (x:Object), x ∈ U := by
+  exact (not_congr univ_iff).mp Russells_paradox
 
 end Chapter3
