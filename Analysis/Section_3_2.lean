@@ -225,14 +225,112 @@ theorem SetTheory.Set.replace_exists (h: axiom_of_universal_specification) (A:Se
   contradiction
 
 /-- Exercise 3.2.2 -/
-theorem SetTheory.Set.not_mem_self (A:Set) : (A:Object) ∉ A := by sorry
+theorem SetTheory.Set.not_mem_self (A:Set) : (A:Object) ∉ A := by
+  have h1 :  (set_to_object A) ∈ ({set_to_object A}:Set) := by simp
+  have h2 : ({set_to_object A}) ≠ (∅:Set) := by
+    by_contra h2
+    rw [h2] at h1
+    have h3 := not_mem_empty (set_to_object A)
+    contradiction
+  have h4 := axiom_of_regularity h2
+  obtain ⟨x, h5⟩ := h4
+  by_contra h6
+  have h7 : (↑x : Object) = set_to_object A := by
+    simpa using x.property
+  have h8 := h5 A h7
+  rw [disjoint_iff] at h8
+  have h9 : A ∩ {set_to_object A} = {set_to_object A} := by
+    ext x
+    simp
+    intro h10
+    rw [← h10] at h6
+    exact h6
+  rw [h8] at h9
+  replace h9 := h9.symm
+  contradiction
+
 
 /-- Exercise 3.2.2 -/
-theorem SetTheory.Set.not_mem_mem (A B:Set) : (A:Object) ∉ B ∨ (B:Object) ∉ A := by sorry
+theorem SetTheory.Set.not_mem_mem (A B:Set) : (A:Object) ∉ B ∨ (B:Object) ∉ A := by
+  have h1 :  (set_to_object A) ∈ ({set_to_object A, set_to_object B}:Set) := by simp
+  have h2 :  (set_to_object B) ∈ ({set_to_object A, set_to_object B}:Set) := by simp
+  have h3 : ({set_to_object A, set_to_object B}) ≠ (∅:Set) := by
+    by_contra h2
+    rw [h2] at h1
+    have h3 := not_mem_empty (set_to_object A)
+    contradiction
+  have h4 := axiom_of_regularity h3
+  obtain ⟨x, h5⟩ := h4
+  by_contra h6
+  push_neg at h6
+  obtain ⟨h7, h8⟩ := h6
+  have h9 : ((↑x : Object) = set_to_object A) ∨ ((↑x : Object) = set_to_object B) := by
+    simpa using x.property
+  have h10 := h5 A
+  have h14 := h5 B
+  rcases h9 with h9 | h9
+  . have h11 := h10 h9
+    rw [disjoint_iff] at h11
+    have h12 := And.intro h8 h2
+    rw [← mem_inter] at h12
+    have h13 := not_mem_empty (set_to_object B)
+    rw [← h11] at h13
+    contradiction
+  have h15 := h14 h9
+  rw [disjoint_iff] at h15
+  have h16 := And.intro h7 h1
+  rw [← mem_inter] at h16
+  have h17 := not_mem_empty (set_to_object A)
+  rw [← h15] at h17
+  contradiction
+
+
+
 
 /-- Exercise 3.2.3 -/
 theorem SetTheory.Set.univ_iff : axiom_of_universal_specification ↔
-  ∃ (U:Set), ∀ x, x ∈ U := by sorry
+  ∃ (U:Set), ∀ x, x ∈ U := by
+    constructor
+    . intro h
+      rw [axiom_of_universal_specification] at h
+      set P : Object → Prop := fun y ↦ (∃ z:Set, y = set_to_object z ∧ ((∀ x, x ∈ z) ∨ (y ∉ z)))
+      choose a ha using h P
+      by_cases h1 : (set_to_object a) ∈ a
+      . have hb := (ha a).mp h1
+        obtain ⟨z, hz_eq, hz_not_mem⟩ := hb
+        simp at hz_eq
+        rw [←hz_eq] at hz_not_mem
+        use a
+        rcases hz_not_mem with hy | hy
+        . exact hy
+        contradiction
+      use a
+      replace ha := (not_congr (ha a)).mp h1
+      dsimp [P] at ha
+      push_neg at ha
+      replace ha := ha a
+      simp at ha
+      obtain ⟨ h3, h4 ⟩ := ha
+      contradiction
+    rw [axiom_of_universal_specification]
+    intro h P
+    obtain ⟨U, h1⟩ := h
+    let P_on_U : U → Prop := fun x => P x.val
+    use (U.specify P_on_U)
+    intro x
+    constructor
+    . intro h2
+      have hspecification := (specification_axiom'' P_on_U x).mp h2
+      obtain ⟨b, h4⟩ := hspecification
+      dsimp [P_on_U] at h4
+      exact h4
+    intro h2
+    have h3 := h1 x
+    simp_all
+    dsimp [P_on_U]
+    exact h2
+
+
 
 /-- Exercise 3.2.3 -/
 theorem SetTheory.Set.no_univ : ¬ ∃ (U:Set), ∀ (x:Object), x ∈ U := by sorry
