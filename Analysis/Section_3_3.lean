@@ -343,7 +343,9 @@ example : Function.Injective (fun (n:ℕ) ↦ n^2) := by
 /-- Remark 3.3.19 -/
 theorem SetTheory.Set.two_to_one {X Y: Set} {f: Function X Y} (h: ¬ f.one_to_one) :
     ∃ x x': X, x ≠ x' ∧ f x = f x' := by
-  rw [Function.one_to_one] at h; aesop
+  rw [Function.one_to_one] at h;
+  push_neg at h
+  exact h
 
 /-- Definition 3.3.20 (Onto functions) -/
 abbrev Function.onto {X Y: Set} (f: Function X Y) : Prop := ∀ y: Y, ∃ x: X, f x = y
@@ -353,14 +355,16 @@ theorem Function.onto_iff {X Y: Set} (f: Function X Y) : f.onto ↔ Function.Sur
 
 /-- Example 3.3.21 (using Mathlib) -/
 example : ¬ Function.Surjective (fun (n:ℤ) ↦ n^2) := by
-  unfold Function.Surjective; push_neg
+  unfold Function.Surjective;
+  push_neg
   use (-1); intro a
   linarith [sq_nonneg a]
 
 abbrev A_3_3_21 := { m:ℤ // ∃ n:ℤ, m = n^2 }
 
 example : Function.Surjective (fun (n:ℤ) ↦ ⟨ n^2, by use n ⟩ : ℤ → A_3_3_21) := by
-  rintro ⟨b, ⟨a, ha⟩⟩; use a
+  rintro ⟨b, ⟨a, ha⟩⟩;
+  use a
   simp only [ha]
 
 /-- Definition 3.3.23 (Bijective functions) -/
@@ -369,7 +373,10 @@ abbrev Function.bijective {X Y: Set} (f: Function X Y) : Prop := f.one_to_one �
 /-- Compatibility with Mathlib's {name}`Function.Bijective` -/
 theorem Function.bijective_iff {X Y: Set} (f: Function X Y) :
     f.bijective ↔ Function.Bijective f.to_fn := by
-  rw [Function.bijective, Function.Bijective, one_to_one_iff', onto_iff]
+  rw [Function.bijective]
+  rw [Function.Bijective]
+  rw [one_to_one_iff']
+  rw [onto_iff]
 
 /-- Example 3.3.24 (using Mathlib) -/
 abbrev f_3_3_24 : Fin 3 → ({3,4}:_root_.Set ℕ) := fun x ↦ match x with
@@ -377,6 +384,7 @@ abbrev f_3_3_24 : Fin 3 → ({3,4}:_root_.Set ℕ) := fun x ↦ match x with
 | 1 => ⟨ 3, by norm_num ⟩
 | 2 => ⟨ 4, by norm_num ⟩
 
+example : Function.Surjective f_3_3_24 := by decide
 example : ¬ Function.Injective f_3_3_24 := by decide
 example : ¬ Function.Bijective f_3_3_24 := by decide
 
@@ -385,6 +393,7 @@ abbrev g_3_3_24 : Fin 2 → ({2,3,4}:_root_.Set ℕ) := fun x ↦ match x with
 | 1 => ⟨ 3, by norm_num ⟩
 
 example : ¬ Function.Surjective g_3_3_24 := by decide
+example : Function.Injective g_3_3_24 := by decide
 example : ¬ Function.Bijective g_3_3_24 := by decide
 
 abbrev h_3_3_24 : Fin 3 → ({3,4,5}:_root_.Set ℕ) := fun x ↦ match x with
@@ -401,15 +410,23 @@ example : Function.Bijective h_3_3_24 := by decide
 example : Function.Bijective (fun n ↦ ⟨ n+1, by omega⟩ : ℕ → { n:ℕ // n ≠ 0 }) := by
   constructor
   · intro _ _
-    simp only [Subtype.mk.injEq]; omega
-  intro ⟨x, hx⟩; use x-1
-  simp only [Subtype.mk.injEq]; omega
+    simp only [Subtype.mk.injEq];
+    omega
+  intro ⟨x, hx⟩;
+  use x-1
+  simp only [Subtype.mk.injEq];
+  omega
 
 example : ¬ Function.Bijective (fun n ↦ n+1) := by
-  suffices h : ¬ Function.Surjective (fun n ↦ n+1) by unfold Function.Bijective; tauto
-  unfold Function.Surjective; push_neg
-  use 0; intros
-  symm; apply Nat.zero_ne_add_one
+  suffices h : ¬ Function.Surjective (fun n ↦ n+1) by
+    unfold Function.Bijective
+    tauto
+  unfold Function.Surjective;
+  push_neg
+  use 0;
+  intros
+  symm;
+  apply Nat.zero_ne_add_one
 
 /-- Remark 3.3.27 -/
 theorem Function.bijective_incorrect_def :
@@ -417,14 +434,19 @@ theorem Function.bijective_incorrect_def :
   use Nat, Nat
   set f := mk_fn fun x ↦ (0: Nat); use f
   constructor
-  · intros
+  · intros x
     apply existsUnique_of_exists_of_unique
     · use 0; rw [Function.eval]
-    intros; rw [Function.eval] at *; aesop
+    intros y1 y2 h1 h2; rw [Function.eval] at *; --aesop
+    unfold f at *
+    simp at *
+    rw [h1, h2]
   rw [Function.bijective]
   suffices h : ¬ f.one_to_one by tauto
   rw [Function.one_to_one_iff]
-  push_neg; use 0, 1; simp [f]
+  push_neg;
+  use 0, 1;
+  simp [f]
 
 /--
   We cannot use the notation {syntax term}`f⁻¹` for the inverse because in Mathlib's {name}`Inv` class, the inverse
@@ -444,12 +466,14 @@ abbrev Function.inverse {X Y: Set} (f: Function X Y) (h: f.bijective) :
   )
 
 theorem Function.inverse_eval {X Y: Set} {f: Function X Y} (h: f.bijective) (y: Y) (x: X) :
-    x = (f.inverse h) y ↔ f x = y := Function.eval _ _ _
+    x = (f.inverse h) y ↔ f x = y := Function.eval (Function.inverse f h) y x
 
 /-- Compatibility with Mathlib's notion of inverse -/
 theorem Function.inverse_eq {X Y: Set} [Nonempty X] {f: Function X Y} (h: f.bijective) :
     (f.inverse h).to_fn = Function.invFun f.to_fn := by
-  ext y; congr; symm
+  ext y;
+  congr;
+  symm
   rw [inverse_eval]
   apply Function.rightInverse_invFun (f.bijective_iff.mp h).2
 
@@ -632,24 +656,74 @@ def Function.comp_surjective' : Decidable (∀ (X Y Z:Set) (f: Function X Y) (g 
 
 /-- Exercise 3.3.6 -/
 theorem Function.inverse_comp_self {X Y: Set} {f: Function X Y} (h: f.bijective) (x: X) :
-    (f.inverse h) (f x) = x := by sorry
+    (f.inverse h) (f x) = x := by
+    symm
+    rw [inverse_eval]
 
 theorem Function.self_comp_inverse {X Y: Set} {f: Function X Y} (h: f.bijective) (y: Y) :
-    f ((f.inverse h) y) = y := by sorry
+    f ((f.inverse h) y) = y := by
+      rw [bijective] at h
+      have ⟨h1, h2⟩ := h
+      rw [Function.onto] at h2
+      have h3 := h2 y
+      obtain ⟨a, ha⟩ := h3
+      rw [← ha, Function.inverse_comp_self]
 
 theorem Function.inverse_bijective {X Y: Set} {f: Function X Y} (h: f.bijective) :
-    (f.inverse h).bijective := by sorry
+    (f.inverse h).bijective := by
+      rw [bijective] at *
+      have ⟨h1, h2⟩ := h
+      rw [Function.one_to_one] at h1
+      rw [Function.onto] at h2
+      constructor
+      . intro x y h3
+        have ⟨a, ha⟩ := h2 x
+        have ⟨b, hb⟩ := h2 y
+        rw [← ha, ← hb, Function.inverse_comp_self, Function.inverse_comp_self]
+        rw [← ha, ←hb] at h3
+        aesop
+      intro x
+      use (f.to_fn x)
+      rw [Function.inverse_comp_self]
+
 
 theorem Function.inverse_inverse {X Y: Set} {f: Function X Y} (h: f.bijective) :
-    (f.inverse h).inverse (f.inverse_bijective h) = f := by sorry
+    (f.inverse h).inverse (f.inverse_bijective h) = f := by
+      rw [Function.eq_iff]
+      intro y
+      have h3 := (Function.inverse_comp_self (f.inverse_bijective h)) (f.to_fn y)
+      have h4 := (Function.inverse_comp_self h) y
+      rw [h4] at h3
+      exact h3
 
 /-- Exercise 3.3.7 -/
 theorem Function.comp_bijective {X Y Z:Set} {f: Function X Y} {g : Function Y Z} (hf: f.bijective)
-  (hg: g.bijective) : (g ○ f).bijective := by sorry
+  (hg: g.bijective) : (g ○ f).bijective := by
+      rw [bijective] at *
+      have ⟨hf1, hf2⟩ := hf
+      have ⟨hg1, hg2⟩ := hg
+      constructor
+      . exact Function.comp_of_inj hf1 hg1
+      exact Function.comp_of_surj hf2 hg2
 
+set_option pp.proofs true
 theorem Function.inv_of_comp {X Y Z:Set} {f: Function X Y} {g : Function Y Z}
   (hf: f.bijective) (hg: g.bijective) :
-    (g ○ f).inverse (Function.comp_bijective hf hg) = (f.inverse hf) ○ (g.inverse hg) := by sorry
+    (g ○ f).inverse (Function.comp_bijective hf hg) = (f.inverse hf) ○ (g.inverse hg) := by
+      have h0 := Function.comp_bijective hf hg
+      rw [bijective] at h0
+      have ⟨hneg1,hneg2⟩ := h0
+      rw [Function.onto] at hneg2
+      have h1 (x:X): ((f.inverse hf) ○ (g.inverse hg)) ((g ○ f) x) = x := by
+        simp
+        rw [Function.inverse_comp_self]
+        rw [Function.inverse_comp_self]
+      rw [Function.eq_iff]
+      intro y
+      have ⟨a, ha⟩ := hneg2 y
+      have h2 := Function.inverse_comp_self (h0) a
+      rw [← ha]
+      simp only [h1, h2]
 
 /-- Exercise 3.3.8 -/
 abbrev Function.inclusion {X Y:Set} (h: X ⊆ Y) :
@@ -658,25 +732,170 @@ abbrev Function.inclusion {X Y:Set} (h: X ⊆ Y) :
 abbrev Function.id (X:Set) : Function X X := Function.mk_fn (fun x ↦ x)
 
 theorem Function.inclusion_id (X:Set) :
-    Function.inclusion (SetTheory.Set.subset_self X) = Function.id X := by sorry
+    Function.inclusion (SetTheory.Set.subset_self X) = Function.id X := by rw [inclusion]
+
 
 theorem Function.inclusion_comp (X Y Z:Set) (hXY: X ⊆ Y) (hYZ: Y ⊆ Z) :
-    Function.inclusion hYZ ○ Function.inclusion hXY = Function.inclusion (SetTheory.Set.subset_trans hXY hYZ) := by sorry
+    Function.inclusion hYZ ○ Function.inclusion hXY = Function.inclusion (SetTheory.Set.subset_trans hXY hYZ) := by
+      rw [inclusion, inclusion, inclusion]
+      aesop
 
-theorem Function.comp_id {A B:Set} (f: Function A B) : f ○ Function.id A = f := by sorry
 
-theorem Function.id_comp {A B:Set} (f: Function A B) : Function.id B ○ f = f := by sorry
+theorem Function.comp_id {A B:Set} (f: Function A B) : f ○ Function.id A = f := by
+    rw [Function.eq_iff]
+    intro y
+    rw [id]
+    simp
+
+theorem Function.id_comp {A B:Set} (f: Function A B) : Function.id B ○ f = f := by
+    rw [Function.eq_iff]
+    intro y
+    rw [id]
+    simp
 
 theorem Function.comp_inv {A B:Set} (f: Function A B) (hf: f.bijective) :
-    f ○ f.inverse hf = Function.id B := by sorry
+    f ○ f.inverse hf = Function.id B := by
+    rw [Function.eq_iff]
+    intro y
+    rw [id]
+    simp
+    exact Function.self_comp_inverse hf y
+
 
 theorem Function.inv_comp {A B:Set} (f: Function A B) (hf: f.bijective) :
-    f.inverse hf ○ f = Function.id A := by sorry
+    f.inverse hf ○ f = Function.id A := by
+    rw [Function.eq_iff]
+    intro y
+    rw [id]
+    simp
+    exact Function.inverse_comp_self hf y
+
+theorem Function.comp_fun_rewrite {X Y Z:Set} (f: Function X Y) (g: Function Y Z) (x : X):
+    (g ○ f) x = g.to_fn (f.to_fn x) := by simp_all
 
 open Classical in
 theorem Function.glue {X Y Z:Set} (hXY: Disjoint X Y) (f: Function X Z) (g: Function Y Z) :
     ∃! h: Function (X ∪ Y) Z, (h ○ Function.inclusion (SetTheory.Set.subset_union_left X Y) = f)
-    ∧ (h ○ Function.inclusion (SetTheory.Set.subset_union_right X Y) = g) := by sorry
+    ∧ (h ○ Function.inclusion (SetTheory.Set.subset_union_right X Y) = g) := by
+      let P : (SetTheory.union_pair X Y) → Z → Prop := fun x y => ((x.val ∈ X) ∧ (∃ z : X, z = x.val ∧ y = f z) ∨ (x.val ∈ Y) ∧ (∃ z : Y, z = x.val ∧ y = g z))
+      have h0 (x : (SetTheory.union_pair X Y)) : (x.val ∈ X ∧ x.val ∉ Y) ∨ (x.val ∉ X ∧ x.val ∈ Y) := by
+        rw [SetTheory.Set.disjoint_iff] at hXY
+        have hneg1 : x.val ∈ (X ∪ Y) := x.property
+        rw [SetTheory.Set.mem_union] at hneg1
+        rcases hneg1 with hneg1 | hneg1
+        . have hneg2 : x.val ∉ Y := by
+            intro hneg3
+            have hneg4 := And.intro hneg1 hneg3
+            rw [← SetTheory.Set.mem_inter] at hneg4
+            simp [hXY] at hneg4
+          tauto
+        have hneg2 : x.val ∉ X := by
+          intro hneg3
+          have hneg4 := And.intro hneg3 hneg1
+          rw [← SetTheory.Set.mem_inter] at hneg4
+          simp [hXY] at hneg4
+        tauto
+      have union_left (y : X.toSubtype): y.val ∈ SetTheory.union_pair X Y := by
+          have h4 := SetTheory.Set.subset_union_left X Y
+          rw [SetTheory.Set.subset_def] at h4
+          exact h4 y.val y.property
+      have union_right (y : Y.toSubtype): y.val ∈ SetTheory.union_pair X Y := by
+          have h4 := SetTheory.Set.subset_union_right X Y
+          rw [SetTheory.Set.subset_def] at h4
+          exact h4 y.val y.property
+      have inclusion_left (y : X.toSubtype) (z : y.val ∈ SetTheory.union_pair X Y): ((inclusion (SetTheory.Set.subset_union_left X Y)).to_fn y) = ⟨y.val, z⟩ := by
+          simp_all
+      have inclusion_right (y : Y.toSubtype) (z : y.val ∈ SetTheory.union_pair X Y): ((inclusion (SetTheory.Set.subset_union_right X Y)).to_fn y) = ⟨y.val, z⟩ := by
+          simp_all
+
+      have h1 : ∀ x: (SetTheory.union_pair X Y), ∃! y: Z, P x y := by
+        simp
+        intro x hx
+        have h1 := h0 ⟨x, hx⟩
+        rcases h1 with h1 | h1
+        . obtain ⟨h2,h3⟩ := h1
+          use (f ↑⟨x, h2⟩)
+          simp only [P, h2, h3]
+          simp
+          exact h2
+        obtain ⟨h2,h3⟩ := h1
+        use (g ↑⟨x, h3⟩)
+        simp only [P, h2, h3]
+        simp
+        exact h3
+      let fx := Function.mk P h1
+      have fn_left (y: SetTheory.union_pair X Y) (z: y.val ∈ X) : fx.to_fn y = f.to_fn ⟨y, z⟩ := by
+        have hfx : P y (f.to_fn ⟨y, z⟩) := by
+            unfold P
+            simp_all
+        have hfx1 := fx.unique y
+        rw [Function.to_fn]
+        apply (fx.unique y).unique
+        · exact (fx.unique y).choose_spec
+        · unfold fx
+          exact hfx
+      have fn_right (y: SetTheory.union_pair X Y) (z: y.val ∈ Y) : fx.to_fn y = g.to_fn ⟨y, z⟩ := by
+        have hfx : P y (g.to_fn ⟨y, z⟩) := by
+          unfold P
+          simp_all
+        have hfx1 := fx.unique y
+        rw [Function.to_fn]
+        apply (fx.unique y).unique
+        · exact (fx.unique y).choose_spec
+        · unfold fx
+          exact hfx
+      apply ExistsUnique.intro fx
+      . constructor
+        . rw [Function.eq_iff]
+          intro y
+          have h5 : y.val ∈ X := by
+            exact y.property
+          have hu : y.val ∈ SetTheory.union_pair X Y := by
+            have h4 := SetTheory.Set.subset_union_left X Y
+            rw [SetTheory.Set.subset_def] at h4
+            exact h4 y.val h5
+          have h3 := inclusion_left y (union_left y)
+          rw [Function.comp_fun_rewrite]
+          rw [h3]
+          exact fn_left ⟨y, hu⟩ y.property
+        rw [Function.eq_iff]
+        intro y
+        have h5 : y.val ∈ Y := by
+          exact y.property
+        have hu : y.val ∈ SetTheory.union_pair X Y := by
+          have h4 := SetTheory.Set.subset_union_right X Y
+          rw [SetTheory.Set.subset_def] at h4
+          exact h4 y.val h5
+        have h3 := inclusion_right y (union_right y)
+        rw [Function.comp_fun_rewrite]
+        rw [h3]
+        exact fn_right ⟨y, hu⟩ y.property
+      intro f1 ⟨h2, h3⟩
+      rw [Function.eq_iff] at h2 h3 ⊢
+      intro ⟨x, hx⟩
+      have h4 := h0 ⟨x, hx⟩
+      rcases h4 with h4 | h4
+      . obtain ⟨h5, h6⟩ := h4
+        replace h2 := h2 ⟨x, h5⟩
+        have h7 := inclusion_left ⟨x, h5⟩ hx
+        rw [Function.comp_fun_rewrite] at h2
+        rw [h7] at h2
+        simp at h2
+        rw [h2]
+        have h8 := fn_left ⟨x, hx⟩ h5
+        simp at h8
+        rw [h8]
+      obtain ⟨h5, h6⟩ := h4
+      replace h2 := h3 ⟨x, h6⟩
+      have h7 := inclusion_right ⟨x, h6⟩ hx
+      rw [Function.comp_fun_rewrite] at h2
+      rw [h7] at h2
+      simp at h2
+      rw [h2]
+      have h8 := fn_right ⟨x, hx⟩ h6
+      simp at h8
+      rw [h8]
+
 
 open Classical in
 theorem Function.glue' {X Y Z:Set} (f: Function X Z) (g: Function Y Z)
