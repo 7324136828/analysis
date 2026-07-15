@@ -76,6 +76,11 @@ namespace Chapter3
 becomes relevant when constructing models of set theory in the Chapter 3 epilogue. -/
 universe u v
 
+def PositiveNat := Subtype (fun n : Nat => 0 < n)
+
+def three : PositiveNat :=
+  ⟨3, by decide⟩
+
 /-- The axioms of Zermelo-Frankel theory with atoms. -/
 class SetTheory where
   Set : Type u -- Axiom 3.1
@@ -164,11 +169,42 @@ theorem SetTheory.Set.not_mem_empty : ∀ x, x ∉ (∅:Set) := emptyset_mem
 
 /-- Empty set has no elements -/
 theorem SetTheory.Set.eq_empty_iff_forall_notMem {X:Set} : X = ∅ ↔ (∀ x, x ∉ X) := by
-  sorry
+  constructor
+  . intro h a
+    have h1 := SetTheory.Set.not_mem_empty a
+    rw [← h] at h1
+    exact h1
+  intro h
+  have h2 := SetTheory.Set.not_mem_empty
+  have h3 :  ∀ (x : Object), x ∈ X ↔ x ∈ (∅:Set) := by
+    intro x
+    constructor
+    . intro h4
+      have h5 := h x
+      contradiction
+    intro h4
+    have h5 := h2 x
+    contradiction
+  have h6 := SetTheory.Set.ext h3
+  exact h6
+
 
 /-- Empty set is unique -/
 theorem SetTheory.Set.empty_unique : ∃! (X:Set), ∀ x, x ∉ X := by
-  sorry
+  apply ExistsUnique.intro (∅:Set)
+  exact SetTheory.Set.not_mem_empty
+  intro y h
+  have h3 :  ∀ (x : Object), x ∈ y ↔ x ∈ (∅:Set) := by
+    intro x
+    constructor
+    . intro h4
+      have h5 := h x
+      contradiction
+    intro  h4
+    have h5 := SetTheory.Set.not_mem_empty x
+    contradiction
+  have h6 := SetTheory.Set.ext h3
+  exact h6
 
 /-- Lemma 3.1.5 (Single choice) -/
 lemma SetTheory.Set.nonempty_def {X:Set} (h: X ≠ ∅) : ∃ x, x ∈ X := by
@@ -214,11 +250,11 @@ instance SetTheory.Set.instInsert : Insert Object Set where
 
 @[simp]
 theorem SetTheory.Set.mem_insert (a b: Object) (X: Set) : a ∈ insert b X ↔ a = b ∨ a ∈ X := by
-  simp only [insert, Insert.insert, mem_union, mem_singleton]
+  simp only [insert, mem_union, mem_singleton]
 
 /-- Axiom 3.3(b) (pair).  Note: in some applications one may have to cast {lean (type := "Set")}`{a,b}`
     to {name}`Set`. -/
-theorem SetTheory.Set.pair_eq (a b:Object) : ({a,b}:Set) = {a} ∪ {b} := by rfl
+theorem SetTheory.Set.pair_eq (a b:Object) : ({a,b}:Set) = {a} ∪ {b} := by simp only [insert]
 
 /-- Axiom 3.3(b) (pair).  Note: in some applications one may have to cast {lean (type := "Set")}`{a,b}`
     to {name}`Set`. -/
@@ -227,27 +263,104 @@ theorem SetTheory.Set.mem_pair (x a b:Object) : x ∈ ({a,b}:Set) ↔ (x = a ∨
   simp [pair_eq, mem_union, mem_singleton]
 
 @[simp]
-theorem SetTheory.Set.mem_triple (x a b c:Object) : x ∈ ({a,b,c}:Set) ↔ (x = a ∨ x = b ∨ x = c) := by
-  simp [Insert.insert, mem_union, mem_singleton]
+theorem SetTheory.Set.mem_triple (x a b c:Object) : x ∈ ({a,b,c}:Set) ↔ (x = a ∨ x = b ∨ x = c) := by simp [Insert.insert]
 
 /-- Remark 3.1.9 -/
-theorem SetTheory.Set.singleton_uniq (a:Object) : ∃! (X:Set), ∀ x, x ∈ X ↔ x = a := by sorry
+theorem SetTheory.Set.singleton_uniq (a:Object) : ∃! (X:Set), ∀ x, x ∈ X ↔ x = a := by
+  apply ExistsUnique.intro ({a}:Set)
+  . intro x
+    simp
+  intro y h
+  have claim (c:Object) : c ∈ y ↔ c ∈ ({a}:Set) := by
+    simp
+    exact h c
+  apply ext at claim
+  exact claim
+
 
 /-- Remark 3.1.9 -/
-theorem SetTheory.Set.pair_uniq (a b:Object) : ∃! (X:Set), ∀ x, x ∈ X ↔ x = a ∨ x = b := by sorry
+theorem SetTheory.Set.pair_uniq (a b:Object) : ∃! (X:Set), ∀ x, x ∈ X ↔ x = a ∨ x = b := by
+  apply ExistsUnique.intro ({a, b}:Set)
+  . intro x
+    simp
+  intro y h
+  have claim (c:Object) : c ∈ y ↔ c ∈ ({a, b}:Set) := by
+    simp
+    exact h c
+  apply ext at claim
+  exact claim
 
 /-- Remark 3.1.9 -/
-theorem SetTheory.Set.pair_comm (a b:Object) : ({a,b}:Set) = {b,a} := by sorry
+theorem SetTheory.Set.pair_comm (a b:Object) : ({a,b}:Set) = {b,a} := by
+  have claim (c:Object) : c ∈ ({b,a}: Set) ↔ c = b ∨ c = a := by simp
+  have claim2 (c:Object) : c = b ∨ c = a ↔ c = a ∨ c = b := by
+    constructor
+    . intro h1
+      apply Or.symm at h1
+      exact h1
+    intro h1
+    apply Or.symm at h1
+    exact h1
+  have claim3 (c:Object) : c ∈ ({b,a}: Set) ↔ c = a ∨ c = b := Iff.trans (claim c) (claim2 c)
+  have claim4  (c:Object) : c ∈ ({a, b}: Set) ↔ c = a ∨ c = b := by simp
+  have claim5 :=  SetTheory.Set.pair_uniq a b
+  exact claim5.unique claim4 claim3
 
 /-- Remark 3.1.9 -/
 @[simp]
 theorem SetTheory.Set.pair_self (a:Object) : ({a,a}:Set) = {a} := by
-  sorry
+  have claim := SetTheory.Set.singleton_uniq a
+  have claim2 (c:Object) : c ∈ ({a,a}: Set) ↔ c = a := by simp
+  have claim3 (c:Object) : c ∈ ({a}: Set) ↔ c = a := by simp
+  exact claim.unique claim2 claim3
 
 /-- Exercise 3.1.1 -/
 theorem SetTheory.Set.pair_eq_pair {a b c d:Object} (h: ({a,b}:Set) = {c,d}) :
     a = c ∧ b = d ∨ a = d ∧ b = c := by
-  sorry
+  have claim : a ∈ ({a,b}:Set) := by simp
+  have claim2 : a ∈ ({c,d}:Set) := by
+    rw [h] at claim
+    exact claim
+  rw [SetTheory.Set.mem_pair] at claim2
+  have claim3 : b ∈ ({a,b}:Set) := by simp
+  have claim4 : b ∈ ({c,d}:Set) := by
+    rw [h] at claim3
+    exact claim3
+  rw [SetTheory.Set.mem_pair] at claim4
+
+  have claim5 : d ∈ ({c,d}:Set) := by simp
+  have claim6 : d ∈ ({a,b}:Set) := by
+    rw [← h] at claim5
+    exact claim5
+  rw [SetTheory.Set.mem_pair] at claim6
+
+  have claim7 : c ∈ ({c,d}:Set) := by simp
+  have claim8 : c ∈ ({a,b}:Set) := by
+    rw [← h] at claim7
+    exact claim7
+  rw [SetTheory.Set.mem_pair] at claim8
+
+  rcases claim2 with claim2 | claim2
+  . rw [← claim2]
+    simp
+    by_cases h3 : b = d
+    . exact Or.inl h3
+    have h4 : b = c := claim4.resolve_right h3
+    rw [h4, claim2] at claim6
+    have h5 : d = c := claim6.elim id id
+    rw [claim2, h4, h5]
+    simp
+  rw [claim2]
+  simp
+  by_cases h3 : b = c
+  . exact Or.inr h3
+  have h4 : b = d := claim4.resolve_left h3
+  rw [h4, claim2] at claim8
+  have h5 : c = d := claim8.elim id id
+  rw [← claim2, h4, h5]
+  simp
+
+
 
 abbrev SetTheory.Set.empty : Set := ∅
 abbrev SetTheory.Set.singleton_empty : Set := {(empty: Object)}
@@ -255,34 +368,61 @@ abbrev SetTheory.Set.pair_empty : Set := {(empty: Object), (singleton_empty: Obj
 
 /-- Exercise 3.1.2 -/
 theorem SetTheory.Set.emptyset_neq_singleton : empty ≠ singleton_empty := by
-  sorry
+  by_contra h1
+  have h := SetTheory.Set.eq_empty_iff_forall_notMem.mp h1.symm
+  have h2 : (empty: Object) ∈ singleton_empty := by simp
+  have h3 := h (set_to_object empty)
+  contradiction
 
 /-- Exercise 3.1.2 -/
-theorem SetTheory.Set.emptyset_neq_pair : empty ≠ pair_empty := by sorry
+theorem SetTheory.Set.emptyset_neq_pair : empty ≠ pair_empty := by
+  by_contra h1
+  have h := SetTheory.Set.eq_empty_iff_forall_notMem.mp h1.symm
+  have h2 : (empty: Object) ∈ pair_empty := by simp
+  have h3 := h (set_to_object empty)
+  contradiction
 
 /-- Exercise 3.1.2 -/
 theorem SetTheory.Set.singleton_empty_neq_pair : singleton_empty ≠ pair_empty := by
-  sorry
+  by_contra h
+  have h1 : set_to_object {set_to_object empty} ∈ SetTheory.Set.pair_empty := by simp
+  have h2 : set_to_object {set_to_object empty} ∈ singleton_empty := by
+    rw [← h] at h1
+    exact h1
+  have h3 := SetTheory.Set.mem_singleton (set_to_object {set_to_object empty}) empty
+  rw [← SetTheory.Set.singleton_empty] at h2
+  rw [← SetTheory.Set.singleton_empty] at h3
+  have h4 := h3.mp h2
+  have h5 := SetTheory.Set.emptyset_neq_singleton
+  simp at h4
+  replace h4 := h4.symm
+  contradiction
+
 
 /--
   Remark 3.1.11.
   (These results can be proven either by a direct rewrite, or by using extensionality.)
 -/
-theorem SetTheory.Set.union_congr_left (A A' B:Set) (h: A = A') : A ∪ B = A' ∪ B := by sorry
+theorem SetTheory.Set.union_congr_left (A A' B:Set) (h: A = A') : A ∪ B = A' ∪ B := by rw [h]
 
 /--
   Remark 3.1.11.
   (These results can be proven either by a direct rewrite, or by using extensionality.)
 -/
-theorem SetTheory.Set.union_congr_right (A B B':Set) (h: B = B') : A ∪ B = A ∪ B' := by sorry
+theorem SetTheory.Set.union_congr_right (A B B':Set) (h: B = B') : A ∪ B = A ∪ B' := by rw [h]
 
 /-- Lemma 3.1.12 (Basic properties of unions) / Exercise 3.1.3 -/
 theorem SetTheory.Set.singleton_union_singleton (a b:Object) :
-    ({a}:Set) ∪ ({b}:Set) = {a,b} := by
-  sorry
+    ({a}:Set) ∪ ({b}:Set) = {a,b} := by rw [SetTheory.Set.pair_eq]
 
 /-- Lemma 3.1.12 (Basic properties of unions) / Exercise 3.1.3 -/
-theorem SetTheory.Set.union_comm (A B:Set) : A ∪ B = B ∪ A := by sorry
+theorem SetTheory.Set.union_comm (A B:Set) : A ∪ B = B ∪ A := by
+  ext x
+  constructor
+  . intro h
+    exact ((mem_union x B A).mpr) (((mem_union x A B).mp h).symm)
+  intro h
+  exact ((mem_union x A B).mpr) (((mem_union x B A).mp h).symm)
 
 /-- Lemma 3.1.12 (Basic properties of unions) / Exercise 3.1.3 -/
 theorem SetTheory.Set.union_assoc (A B C:Set) : (A ∪ B) ∪ C = A ∪ (B ∪ C) := by
@@ -298,22 +438,58 @@ theorem SetTheory.Set.union_assoc (A B C:Set) : (A ∪ B) ∪ C = A ∪ (B ∪ C
       rw [mem_union]; tauto
     have : x ∈ B ∪ C := by rw [mem_union]; tauto
     rw [mem_union]; tauto
-  sorry
+  intro hx; rw [mem_union] at hx
+  obtain case1 | case2 := hx
+  . have h2 := (mem_union x A B).mpr (Or.inl case1)
+    have h3 := (mem_union x (A∪B) C).mpr (Or.inl h2)
+    exact h3
+  rw [mem_union] at case2
+  obtain case2a | case2b := case2
+  . have h2 := (mem_union x A B).mpr (Or.inr case2a)
+    have h3 := (mem_union x (A∪B) C).mpr (Or.inl h2)
+    exact h3
+  have h3 := (mem_union x (A∪B) C).mpr (Or.inr case2b)
+  exact h3
 
 /-- Proposition 3.1.27(c) -/
 @[simp]
 theorem SetTheory.Set.union_self (A:Set) : A ∪ A = A := by
-  sorry
+  ext x
+  constructor
+  intro h
+  rw [mem_union] at h
+  have h1 := h.elim id id
+  exact h1
+  intro h
+  rw [mem_union]
+  apply Or.inl h
 
 /-- Proposition 3.1.27(a) -/
 @[simp]
 theorem SetTheory.Set.union_empty (A:Set) : A ∪ ∅ = A := by
-  sorry
+  ext x
+  constructor
+  intro h
+  rw [mem_union] at h
+  simp at h
+  exact h
+  intro h
+  rw [mem_union]
+  apply Or.inl h
+
 
 /-- Proposition 3.1.27(a) -/
 @[simp]
 theorem SetTheory.Set.empty_union (A:Set) : ∅ ∪ A = A := by
-  sorry
+  ext x
+  constructor
+  intro h
+  rw [mem_union] at h
+  simp at h
+  exact h
+  intro h
+  rw [mem_union]
+  apply Or.inr h
 
 theorem SetTheory.Set.triple_eq (a b c:Object) : {a,b,c} = ({a}:Set) ∪ {b,c} := by
   rfl
@@ -350,15 +526,21 @@ theorem SetTheory.Set.subset_def (X Y:Set) : X ⊆ Y ↔ ∀ x, x ∈ X → x �
 theorem SetTheory.Set.ssubset_def (X Y:Set) : X ⊂ Y ↔ (X ⊆ Y ∧ X ≠ Y) := by rfl
 
 /-- Remark 3.1.15 -/
-theorem SetTheory.Set.subset_congr_left {A A' B:Set} (hAA':A = A') (hAB: A ⊆ B) : A' ⊆ B := by sorry
+theorem SetTheory.Set.subset_congr_left {A A' B:Set} (hAA':A = A') (hAB: A ⊆ B) : A' ⊆ B := by
+  rw [hAA'] at hAB
+  exact hAB
 
 /-- Examples 3.1.16 -/
 @[simp, refl]
-theorem SetTheory.Set.subset_self (A:Set) : A ⊆ A := by sorry
+theorem SetTheory.Set.subset_self (A:Set) : A ⊆ A := by
+  have h1 : ∀ x, x ∈ A → x ∈ A := by simp
+  exact (SetTheory.Set.subset_def A A).mp h1
 
 /-- Examples 3.1.16 -/
 @[simp]
-theorem SetTheory.Set.empty_subset (A:Set) : ∅ ⊆ A := by sorry
+theorem SetTheory.Set.empty_subset (A:Set) : ∅ ⊆ A := by
+  have h1 : ∀ x, x ∈ (∅:Set) → x ∈ A := by simp
+  exact (SetTheory.Set.subset_def (∅:Set) A).mp h1
 
 /-- Proposition 3.1.17 (Partial ordering by set inclusion) -/
 theorem SetTheory.Set.subset_trans {A B C:Set} (hAB:A ⊆ B) (hBC:B ⊆ C) : A ⊆ C := by
@@ -372,12 +554,28 @@ theorem SetTheory.Set.subset_trans {A B C:Set} (hAB:A ⊆ B) (hBC:B ⊆ C) : A �
 
 /-- Proposition 3.1.17 (Partial ordering by set inclusion) -/
 theorem SetTheory.Set.subset_antisymm (A B:Set) (hAB:A ⊆ B) (hBA:B ⊆ A) : A = B := by
-  sorry
+  ext x
+  rw [subset_def] at *
+  constructor
+  . intro h
+    exact hAB x h
+  intro h
+  exact hBA x h
 
 /-- Proposition 3.1.17 (Partial ordering by set inclusion) -/
 theorem SetTheory.Set.ssubset_trans (A B C:Set) (hAB:A ⊂ B) (hBC:B ⊂ C) : A ⊂ C := by
-  sorry
-
+  rw [ssubset_def] at *
+  constructor
+  . replace hAB := And.left hAB
+    replace hBC := And.left hBC
+    exact subset_trans hAB hBC
+  by_contra h
+  rw [h] at hAB
+  have h1 := And.left hAB
+  have h2 := And.left hBC
+  have h3 := (SetTheory.Set.subset_antisymm C B h1 h2).symm
+  have h4 := And.right hBC
+  contradiction
 
 /--
   This defines the subtype {lean}`A.toSubtype` for any {lean}`A:Set`.
@@ -450,12 +648,34 @@ theorem SetTheory.Set.specification_axiom'' {A:Set} (P: A → Prop) (x:Object) :
   intro ⟨ h, hP ⟩
   simpa [←specification_axiom' P] using hP
 
-theorem SetTheory.Set.specify_subset {A:Set} (P: A → Prop) : A.specify P ⊆ A := by sorry
+theorem SetTheory.Set.specify_subset {A:Set} (P: A → Prop) : A.specify P ⊆ A := by
+  rw [SetTheory.Set.subset_def]
+  intro x h
+  use specification_axiom h
 
 /-- This exercise may require some understanding of how subtypes are implemented in Lean. -/
 theorem SetTheory.Set.specify_congr {A A':Set} (hAA':A = A') {P: A → Prop} {P': A' → Prop}
   (hPP': (x:Object) → (h:x ∈ A) → (h':x ∈ A') → P ⟨ x, h⟩ ↔ P' ⟨ x, h'⟩ ) :
-    A.specify P = A'.specify P' := by sorry
+    A.specify P = A'.specify P' := by
+    ext x
+    constructor
+    . intro claim1
+      have claim2 := (SetTheory.Set.specification_axiom'' P x).mp claim1
+      obtain ⟨h, claim3⟩ := claim2
+      have h' := h
+      rw [hAA'] at h'
+      have claim4 := (hPP' x h h').mp claim3
+      have claim5 := (SetTheory.Set.specification_axiom'' P' x).mpr ⟨h', claim4⟩
+      exact claim5
+    intro claim1
+    have claim2 := (SetTheory.Set.specification_axiom'' P' x).mp claim1
+    obtain ⟨h', claim3⟩ := claim2
+    have h := h'
+    rw [← hAA'] at h
+    have claim4 := (hPP' x h h').mpr claim3
+    have claim5 := (SetTheory.Set.specification_axiom'' P x).mpr ⟨h, claim4⟩
+    exact claim5
+
 
 instance SetTheory.Set.instIntersection : Inter Set where
   inter X Y := X.specify (fun x ↦ x.val ∈ Y)
@@ -486,43 +706,140 @@ theorem SetTheory.Set.mem_sdiff (x:Object) (X Y:Set) : x ∈ (X \ Y) ↔ (x ∈ 
   intro ⟨ hX, hY ⟩; exact (specification_axiom' (fun x ↦ x.val ∉ Y) ⟨ x, hX⟩ ).mpr hY
 
 /-- Proposition 3.1.27(d) / Exercise 3.1.6 -/
-theorem SetTheory.Set.inter_comm (A B:Set) : A ∩ B = B ∩ A := by sorry
+theorem SetTheory.Set.inter_comm (A B:Set) : A ∩ B = B ∩ A := by
+  ext x
+  simp [And.comm]
 
 /-- Proposition 3.1.27(b) -/
-theorem SetTheory.Set.subset_union {A X: Set} (hAX: A ⊆ X) : A ∪ X = X := by sorry
+theorem SetTheory.Set.subset_union {A X: Set} (hAX: A ⊆ X) : A ∪ X = X := by
+  ext x
+  simp
+  rw [SetTheory.Set.subset_def] at hAX
+  exact hAX x
+
 
 /-- Proposition 3.1.27(b) -/
-theorem SetTheory.Set.union_subset {A X: Set} (hAX: A ⊆ X) : X ∪ A = X := by sorry
+theorem SetTheory.Set.union_subset {A X: Set} (hAX: A ⊆ X) : X ∪ A = X := by
+  ext x
+  simp
+  rw [SetTheory.Set.subset_def] at hAX
+  exact hAX x
 
 /-- Proposition 3.1.27(c) -/
 @[simp]
 theorem SetTheory.Set.inter_self (A:Set) : A ∩ A = A := by
-  sorry
+  ext x
+  simp
 
 /-- Proposition 3.1.27(e) -/
-theorem SetTheory.Set.inter_assoc (A B C:Set) : (A ∩ B) ∩ C = A ∩ (B ∩ C) := by sorry
+theorem SetTheory.Set.inter_assoc (A B C:Set) : (A ∩ B) ∩ C = A ∩ (B ∩ C) := by
+  ext x
+  simp
+  constructor
+  . intro h
+    obtain ⟨h4, h3⟩ := h
+    obtain ⟨h1, h2⟩ := h4
+    have h5 := And.intro h2 h3
+    exact And.intro h1 h5
+  intro h
+  obtain ⟨h1, h4⟩ := h
+  obtain ⟨h2, h3⟩ := h4
+  have h5 := And.intro h1 h2
+  exact And.intro h5 h3
 
 /-- Proposition 3.1.27(f) -/
 theorem  SetTheory.Set.inter_union_distrib_left (A B C:Set) :
     A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩ C) := by
-  sorry
+  ext x
+  simp
+  constructor
+  . intro h
+    obtain ⟨h1, h2⟩ := h
+    rcases h2 with h2 | h2
+    . have h3 := And.intro h1 h2
+      exact Or.inl h3
+    have h3 := And.intro h1 h2
+    exact Or.inr h3
+  intro h
+  rcases h with h | h
+  obtain ⟨h1, h2⟩ := h
+  exact And.intro h1 (Or.inl h2)
+  obtain ⟨h1, h2⟩ := h
+  exact And.intro h1 (Or.inr h2)
 
 /-- Proposition 3.1.27(f) -/
 theorem  SetTheory.Set.union_inter_distrib_left (A B C:Set) :
     A ∪ (B ∩ C) = (A ∪ B) ∩ (A ∪ C) := by
-  sorry
+  ext x
+  simp
+  constructor
+  . intro h
+    rcases h with h | h
+    . exact And.intro (Or.inl h) (Or.inl h)
+    obtain ⟨h1, h2⟩ := h
+    exact And.intro (Or.inr h1) (Or.inr h2)
+  intro h
+  obtain ⟨h1,h2⟩ := h
+  by_cases h3 : x ∈ A
+  exact Or.inl h3
+  . simp only [h3] at h1
+    simp at h1
+    simp only [h3] at h2
+    simp at h2
+    exact Or.inr (And.intro h1 h2)
 
 /-- Proposition 3.1.27(f) -/
-theorem SetTheory.Set.union_compl {A X:Set} (hAX: A ⊆ X) : A ∪ (X \ A) = X := by sorry
+theorem SetTheory.Set.union_compl {A X:Set} (hAX: A ⊆ X) : A ∪ (X \ A) = X := by
+  ext x
+  simp at *
+  rw [SetTheory.Set.subset_def] at hAX
+  have h1 := hAX x
+  constructor
+  . intro h
+    rcases h with h | h
+    . exact h1 h
+    obtain ⟨h2, h3⟩ := h
+    exact h2
+  intro h
+  by_cases h4 : x ∈ A
+  exact Or.inl h4
+  exact Or.inr (And.intro h h4)
 
 /-- Proposition 3.1.27(f) -/
-theorem SetTheory.Set.inter_compl {A X:Set} : A ∩ (X \ A) = ∅ := by sorry
+theorem SetTheory.Set.inter_compl {A X:Set} : A ∩ (X \ A) = ∅ := by
+  ext x
+  simp
+  intro h1 h2
+  exact h1
 
 /-- Proposition 3.1.27(g) -/
-theorem SetTheory.Set.compl_union {A B X:Set} : X \ (A ∪ B) = (X \ A) ∩ (X \ B) := by sorry
+theorem SetTheory.Set.compl_union {A B X:Set} : X \ (A ∪ B) = (X \ A) ∩ (X \ B) := by
+  ext x
+  simp
+  constructor
+  . simp
+    intro h1 h2 h3
+    exact And.intro (And.intro h1 h2) (And.intro h1 h3)
+  simp
+  intro h1 h2 h3 h4
+  tauto
 
 /-- Proposition 3.1.27(g) -/
-theorem SetTheory.Set.compl_inter {A B X:Set} : X \ (A ∩ B) = (X \ A) ∪ (X \ B) := by sorry
+theorem SetTheory.Set.compl_inter {A B X:Set} : X \ (A ∩ B) = (X \ A) ∪ (X \ B) := by
+  ext x
+  simp
+  constructor
+  . simp
+    intro h1 h2
+    by_cases h : x ∈ A
+    . have h3 := h2 h
+      tauto
+    tauto
+  intro h1
+  rw [imp_iff_not_or]
+  rcases h1 with h1 | h1
+  . tauto
+  tauto
 
 /-- Not from textbook: sets form a distributive lattice. -/
 instance SetTheory.Set.instDistribLattice : DistribLattice Set where
@@ -532,12 +849,42 @@ instance SetTheory.Set.instDistribLattice : DistribLattice Set where
   le_antisymm := subset_antisymm
   inf := (· ∩ ·)
   sup := (· ∪ ·)
-  le_sup_left := by sorry
-  le_sup_right := by sorry
-  sup_le := by sorry
-  inf_le_left := by sorry
-  inf_le_right := by sorry
-  le_inf := by sorry
+  le_sup_left := by
+    intro a b
+    rw [SetTheory.Set.subset_def]
+    intro x h
+    simp
+    tauto
+  le_sup_right := by
+    intro a b
+    rw [SetTheory.Set.subset_def]
+    intro x h
+    simp
+    tauto
+  sup_le := by
+    intro a b c h1 h2
+    rw [SetTheory.Set.subset_def] at *
+    intro x h3
+    simp at *
+    rcases h3 with h3 | h3
+    . exact h1 x h3
+    exact h2 x h3
+  inf_le_left := by
+    intro a b
+    rw [SetTheory.Set.subset_def]
+    simp
+    intro x h1 h2
+    exact h1
+  inf_le_right := by
+    intro a b
+    rw [SetTheory.Set.subset_def]
+    simp
+  le_inf := by
+    intro a b c h1 h2
+    rw [SetTheory.Set.subset_def] at *
+    intro x h3
+    simp at *
+    exact And.intro (h1 x h3) (h2 x h3)
   le_sup_inf := by
     intro X Y Z; change (X ∪ Y) ∩ (X ∪ Z) ⊆ X ∪ (Y ∩ Z)
     rw [←union_inter_distrib_left]
@@ -623,11 +970,11 @@ lemma SetTheory.Object.ofnat_eq' {n:ℕ} : (ofNat(n):Object) = (n:Object) := rfl
 
 @[simp]
 lemma SetTheory.Object.ofnat_eq'' {n:Nat} : ((n:ℕ):Object) = (n: Object) := by
-  simp [Nat.cast, NatCast.natCast, Equiv.apply_symm_apply]
+ simp [Nat.cast, NatCast.natCast]
 
 @[simp]
 lemma SetTheory.Object.ofnat_eq''' {n:ℕ} {hn} : ((⟨(n:Object), hn⟩: nat): ℕ) = n := by
-  simp [Nat.cast, NatCast.natCast, Equiv.symm_apply_apply]
+  simp [Nat.cast, NatCast.natCast]
 
 lemma SetTheory.Set.nat_coe_eq {n:ℕ} : (n:Nat) = OfNat.ofNat n := rfl
 
@@ -650,7 +997,9 @@ example : (5:Nat) ≠ (3:Nat) := by
 @[simp]
 theorem SetTheory.Set.ofNat_inj' (n m:ℕ) :
     (ofNat(n) : Object) = (ofNat(m) : Object) ↔ ofNat(n) = ofNat(m) := by
-      simp only [←Object.ofnat_eq, Object.ofnat_eq', Set.coe_inj, Set.nat_equiv_inj]
+      simp only [←Object.ofnat_eq, Object.ofnat_eq']
+      simp only [Set.coe_inj]
+      simp only [Set.nat_equiv_inj]
       rfl
 
 example : (5:Object) ≠ (3:Object) := by
@@ -681,8 +1030,11 @@ lemma SetTheory.Set.nat_equiv_coe_of_coe'' (n:ℕ) : ((ofNat(n):Nat):ℕ) = n :=
 
 @[simp]
 lemma SetTheory.Set.nat_coe_eq_iff' {m: Nat} {n : ℕ} : (m:Object) = (ofNat(n):Object) ↔ (m:ℕ) = ofNat(n) := by
-  constructor <;> intro h <;> rw [show m = n by aesop]
-  apply nat_equiv_coe_of_coe; rfl
+  constructor <;>
+  intro h <;>
+  rw [show m = n by aesop]
+  apply nat_equiv_coe_of_coe;
+  rfl
 
 
 /-- Example 3.1.16 (simplified).  -/
@@ -696,7 +1048,8 @@ example : ({3, 5}:Set).specify (fun x ↦ x.val ≠ 3) = ({5}:Set) := by
   simp only [mem_singleton, specification_axiom'']
   constructor
   · rintro ⟨h1, h2⟩; simp only [mem_pair] at h1; tauto
-  rintro ⟨rfl⟩; norm_num
+  rintro ⟨rfl⟩;
+  norm_num
 
 /-- Example 3.1.24 -/
 example : ({1, 2, 4}:Set) ∩ {2,3,4} = {2, 4} := by
@@ -718,7 +1071,7 @@ example : ¬ Disjoint ({1, 2, 3}:Set) {2,3,4} := by
   rw [eq_empty_iff_forall_notMem] at h
   aesop
 
-example : Disjoint (∅:Set) ∅ := by sorry
+example : Disjoint (∅:Set) ∅ := by aesop
 
 /-- Definition 3.1.26 example -/
 
@@ -727,68 +1080,234 @@ example : ({1, 2, 3, 4}:Set) \ {2,4,6} = {1, 3} := by
 
 /-- Example 3.1.30 -/
 example : ({3,5,9}:Set).replace (P := fun x y ↦ ∃ (n:ℕ), x.val = n ∧ y = (n+1:ℕ)) (by aesop)
-  = {4,6,10} := by sorry
+  = {4,6,10} := by
+    ext x
+    simp only [mem_triple, replacement_axiom]
+    constructor
+    . rintro ⟨a, h2⟩;
+      obtain ⟨n, hn, hx⟩ := h2
+      subst hx
+      have ha := (mem_triple a.val 3 5 9).mp a.property
+      simp only [hn] at ha
+      aesop
+    intro h
+    aesop
+
 
 /-- Example 3.1.31 -/
 example : ({3,5,9}:Set).replace (P := fun _ y ↦ y=1) (by aesop) = {1} := by
   ext; simp only [replacement_axiom]; aesop
 
 /-- Exercise 3.1.5.  One can use the {tactic}`tfae_have` and {tactic}`tfae_finish` tactics here. -/
-theorem SetTheory.Set.subset_tfae (A B:Set) : [A ⊆ B, A ∪ B = B, A ∩ B = A].TFAE := by sorry
+theorem SetTheory.Set.subset_tfae (A B:Set) : [A ⊆ B, A ∪ B = B, A ∩ B = A].TFAE := by
+  tfae_have 1 → 2 := by
+    intro h
+    rw [SetTheory.Set.subset_def] at *
+    ext x
+    simp
+    intro h1
+    exact h x h1
+  tfae_have 2 → 3 := by
+    intro h
+    ext x
+    simp
+    rw [← h]
+    simp
+    tauto
+  tfae_have 3 → 1 := by
+    intro h
+    rw [SetTheory.Set.subset_def] at *
+    intro x
+    rw [← h]
+    simp
+  tfae_finish
+
 
 /-- Exercise 3.1.7 -/
 theorem SetTheory.Set.inter_subset_left (A B:Set) : A ∩ B ⊆ A := by
-  sorry
+  rw [SetTheory.Set.subset_def] at *
+  intro x
+  simp
+  intro h1 h2
+  exact h1
 
 /-- Exercise 3.1.7 -/
 theorem SetTheory.Set.inter_subset_right (A B:Set) : A ∩ B ⊆ B := by
-  sorry
+  rw [SetTheory.Set.subset_def] at *
+  intro x
+  simp
 
 /-- Exercise 3.1.7 -/
 @[simp]
 theorem SetTheory.Set.subset_inter_iff (A B C:Set) : C ⊆ A ∩ B ↔ C ⊆ A ∧ C ⊆ B := by
-  sorry
+  constructor
+  . intro h
+    rw [SetTheory.Set.subset_def] at *
+    simp at h
+    constructor
+    . intro x h1
+      exact (h x h1).1
+    rw [SetTheory.Set.subset_def]
+    intro x h1
+    exact (h x h1).2
+  intro h
+  obtain ⟨h1, h2⟩ := h
+  rw [SetTheory.Set.subset_def] at *
+  simp at *
+  intro x ih
+  exact And.intro (h1 x ih) (h2 x ih)
 
 /-- Exercise 3.1.7 -/
 theorem SetTheory.Set.subset_union_left (A B:Set) : A ⊆ A ∪ B := by
-  sorry
+  rw [SetTheory.Set.subset_def] at *
+  intro x
+  simp
+  intro h
+  exact Or.inl h
 
 /-- Exercise 3.1.7 -/
 theorem SetTheory.Set.subset_union_right (A B:Set) : B ⊆ A ∪ B := by
-  sorry
+  rw [SetTheory.Set.subset_def] at *
+  intro x
+  simp
+  intro h
+  exact Or.inr h
 
 /-- Exercise 3.1.7 -/
 @[simp]
 theorem SetTheory.Set.union_subset_iff (A B C:Set) : A ∪ B ⊆ C ↔ A ⊆ C ∧ B ⊆ C := by
-  sorry
+  have union_u := SetTheory.Set.subset_union_left A B
+  have union_v := SetTheory.Set.subset_union_right A B
+  simp at union_u
+  constructor
+  . intro h1
+    rw [SetTheory.Set.subset_def] at *
+    constructor
+    . intro x h2
+      exact h1 x (union_u x h2)
+    rw [SetTheory.Set.subset_def]
+    intro x h2
+    exact h1 x (union_v x h2)
+  intro ⟨h1, h2⟩
+  rw [SetTheory.Set.subset_def] at *
+  intro x
+  simp
+  intro h
+  rcases h with h | h
+  . exact h1 x h
+  exact h2 x h
+
 
 /-- Exercise 3.1.8 -/
 @[simp]
-theorem SetTheory.Set.inter_union_cancel (A B:Set) : A ∩ (A ∪ B) = A := by sorry
+theorem SetTheory.Set.inter_union_cancel (A B:Set) : A ∩ (A ∪ B) = A := by
+  ext x
+  simp
+  intro h
+  exact Or.inl h
 
 /-- Exercise 3.1.8 -/
 @[simp]
-theorem SetTheory.Set.union_inter_cancel (A B:Set) : A ∪ (A ∩ B) = A := by sorry
+theorem SetTheory.Set.union_inter_cancel (A B:Set) : A ∪ (A ∩ B) = A := by
+  ext x
+  simp
+  intro h1 h2
+  exact h1
 
 /-- Exercise 3.1.9 -/
 theorem SetTheory.Set.partition_left {A B X:Set} (h_union: A ∪ B = X) (h_inter: A ∩ B = ∅) :
-    A = X \ B := by sorry
+    A = X \ B := by
+    ext x
+    subst h_union
+    simp
+    constructor
+    . intro h
+      have h1 : x ∉ B := by
+        by_contra h2
+        have h3 := (mem_inter x A B).mpr (And.intro h h2)
+        rw [h_inter] at h3
+        have h4 := not_mem_empty x
+        contradiction
+      tauto
+    intro ⟨h1, h2⟩
+    rcases h1 with h1 | h1
+    . exact h1
+    contradiction
+
 
 /-- Exercise 3.1.9 -/
 theorem SetTheory.Set.partition_right {A B X:Set} (h_union: A ∪ B = X) (h_inter: A ∩ B = ∅) :
     B = X \ A := by
-  sorry
-
+  have h1 := inter_comm A B
+  have h2 := union_comm A B
+  rw [h1] at h_inter
+  rw [h2] at h_union
+  exact partition_left h_union h_inter
 /--
   Exercise 3.1.10.
   You may find {name}`Function.onFun_apply` and the {tactic}`fin_cases` tactic useful.
 -/
 theorem SetTheory.Set.pairwise_disjoint (A B:Set) :
-    Pairwise (Function.onFun Disjoint ![A \ B, A ∩ B, B \ A]) := by sorry
+    Pairwise (Function.onFun Disjoint ![A \ B, A ∩ B, B \ A]) := by
+    unfold Pairwise
+    intro x y h
+    rw [Function.onFun_apply, disjoint_iff]
+    fin_cases x
+    fin_cases y
+    . simp at *
+    . simp at *
+      ext x
+      simp
+      intro h1 h2 h3
+      exact h2
+    . simp at *
+      ext x
+      simp
+      intro h1 h2 h3
+      exact h1
+    fin_cases y
+    . simp at *
+      ext x
+      simp
+      intro h1 h2 h3
+      exact h2
+    . simp at *
+    . simp at *
+      ext x
+      simp
+      intro h1 h2
+      exact h1
+    fin_cases y
+    . simp at *
+      ext x
+      simp
+      intro h1 h2 h3
+      exact h1
+    . simp at *
+      ext x
+      simp
+      intro h1 h2 h3
+      contradiction
+    . simp at *
 
 /-- Exercise 3.1.10 -/
 theorem SetTheory.Set.union_eq_partition (A B:Set) : A ∪ B = (A \ B) ∪ (A ∩ B) ∪ (B \ A) := by
-  sorry
+  ext x
+  simp
+  constructor
+  . intro h
+    rcases h with h | h
+    . tauto
+    tauto
+  intro h
+  rcases h with h | h
+  . rcases h with h | h
+    . obtain ⟨h1, h2⟩ := h
+      exact Or.inl h1
+    obtain ⟨h1, h2⟩ := h
+    exact Or.inr h2
+  obtain ⟨h1, h2⟩ := h
+  exact Or.inr h1
 
 /--
   Exercise 3.1.11.
@@ -796,19 +1315,99 @@ theorem SetTheory.Set.union_eq_partition (A B:Set) : A ∪ B = (A \ B) ∪ (A �
   {name}`Set.specification_axiom'`, or anything built from them (like differences and intersections).
 -/
 theorem SetTheory.Set.specification_from_replacement {A:Set} {P: A → Prop} :
-    ∃ B, B ⊆ A ∧ ∀ x, x.val ∈ B ↔ P x := by sorry
+    ∃ B, B ⊆ A ∧ ∀ x, x.val ∈ B ↔ P x := by
+    use replace A (P := fun x y => x = y ∧ P x) (by aesop)
+    . simp_all
+      intro x
+      simp_all
 
 /-- Exercise 3.1.12.-/
 theorem SetTheory.Set.subset_union_subset {A B A' B':Set} (hA'A: A' ⊆ A) (hB'B: B' ⊆ B) :
-    A' ∪ B' ⊆ A ∪ B := by sorry
+    A' ∪ B' ⊆ A ∪ B := by
+    simp_all
+    have h1 := subset_union_left A B
+    have h2 := subset_union_right A B
+    exact And.intro (subset_trans hA'A h1) (subset_trans hB'B h2)
 
 /-- Exercise 3.1.12.-/
 theorem SetTheory.Set.subset_inter_subset {A B A' B':Set} (hA'A: A' ⊆ A) (hB'B: B' ⊆ B) :
-    A' ∩ B' ⊆ A ∩ B := by sorry
+    A' ∩ B' ⊆ A ∩ B := by
+    simp_all
+    have h1 := inter_subset_left A' B'
+    have h2 := inter_subset_right A' B'
+    exact And.intro (subset_trans h1 hA'A) (subset_trans h2 hB'B)
+
 
 /-- Exercise 3.1.12.-/
 theorem SetTheory.Set.subset_diff_subset_counter :
-    ∃ (A B A' B':Set), (A' ⊆ A) ∧ (B' ⊆ B) ∧ ¬ (A' \ B') ⊆ (A \ B) := by sorry
+    ∃ (A B A' B':Set), (A' ⊆ A) ∧ (B' ⊆ B) ∧ ¬ (A' \ B') ⊆ (A \ B) := by
+    simp_all
+    use {1, 2, 3}
+    use {2, 3, 4}
+    use {2, 3}
+    constructor
+    . rw [subset_def]
+      intro x h
+      rw [mem_pair] at h
+      rw [mem_triple]
+      rcases h with h | h
+      . rw [h]
+        tauto
+      rw [h]
+      tauto
+    use {3}
+    constructor
+    . rw [subset_def]
+      intro x h
+      rw [mem_singleton] at h
+      rw [mem_triple]
+      tauto
+    have h1 : ({2, 3} : Set) \ ({3} : Set) = ({2} : Set) := by
+      ext x
+      simp
+      constructor
+      . intro h
+        tauto
+      intro h
+      have h1 : ¬ x = 3 := by
+        by_contra h2
+        rw [h] at h2
+        exact absurd h2 (by norm_num)
+      tauto
+    have h2 :  ({1, 2, 3}: Set) \ ({2, 3, 4}:Set) = ({1}:Set) := by
+      ext x
+      simp
+      constructor
+      . intro ⟨h1,h2⟩
+        obtain ⟨h3,h4,h5⟩ := h2
+        rcases h1 with h1 | h1 | h1
+        . exact h1
+        . contradiction
+        contradiction
+      intro h
+      have h1 : ¬ x = 2 := by
+        by_contra hx
+        rw [h] at hx
+        exact absurd hx (by norm_num)
+      have h2 : ¬ x = 3 := by
+        by_contra hx
+        rw [h] at hx
+        exact absurd hx (by norm_num)
+      have h3 : ¬ x = 4 := by
+        by_contra hx
+        rw [h] at hx
+        exact absurd hx (by norm_num)
+      tauto
+    rw [h1, h2]
+    have h3 : ¬({2}:Set) ⊆ ({1}:Set) := by
+      by_contra h
+      rw [subset_def] at h
+      have h4 : 2 ∈ ({2}:Set) := by simp
+      have h5 := h 2 h4
+      rw [mem_singleton] at h5
+      exact absurd h5 (by norm_num)
+    exact h3
+
 
 /-
   Final part of Exercise 3.1.12: state and prove a reasonable substitute positive result for the
@@ -816,7 +1415,90 @@ theorem SetTheory.Set.subset_diff_subset_counter :
 -/
 
 /-- Exercise 3.1.13 -/
-theorem SetTheory.Set.singleton_iff (A:Set) (hA: A ≠ ∅) : (¬∃ B ⊂ A, B ≠ ∅) ↔ ∃ x, A = {x} := by sorry
+theorem SetTheory.Set.singleton_iff (A:Set) (hA: A ≠ ∅) : (¬∃ B ⊂ A, B ≠ ∅) ↔ ∃ x, A = {x} := by
+  have h1 := nonempty_def hA
+  obtain ⟨x, h2⟩ := h1
+  simp_all
+  constructor
+  . intro h
+    use x
+    ext y
+    simp_all
+    constructor
+    . intro h3
+      by_contra h4
+      have h5 : ({x, y}:Set) ⊆ A := by
+        rw [subset_def]
+        intro z h6
+        rw [mem_pair] at h6
+        rcases h6 with h6 | h6
+        . rw [← h6] at h2
+          exact h2
+        rw [← h6] at h3
+        exact h3
+      have h6 : ({x}:Set) ⊂ ({x, y}:Set) := by
+        rw [instSSubset]
+        constructor
+        intro z h6
+        rw [mem_singleton] at h6
+        rw [mem_pair]
+        tauto
+        by_contra h7
+        have h8 : y ∈ ({x, y}:Set) := by simp
+        rw [← h7, mem_singleton] at h8
+        contradiction
+      have h7 : ({x}:Set) ⊂ A := by
+        by_cases h8 : A = ({x, y}:Set)
+        . rw [← h8] at h6
+          exact h6
+        push_neg at h8
+        replace h8 := h8.symm
+        have h9 :  {x, y} ⊂ A := And.intro h5 h8
+        have h10 := ssubset_trans ({x}:Set) ({x, y}:Set) A h6 h9
+        exact h10
+      have h8 : ({x}:Set) ≠ ∅ := by
+        by_contra h9
+        have h10 : x ∈ ({x}:Set) := by simp
+        rw [h9] at h10
+        have h11 := not_mem_empty x
+        contradiction
+      have h9 := h ({x}:Set) h7
+      contradiction
+    intro h1
+    rw [← h1] at h2
+    exact h2
+  intro h
+  obtain ⟨y, h1⟩ := h
+  intro z h3
+  by_contra h4
+  push_neg at h4
+  have h5 := nonempty_def h4
+  obtain ⟨w, h5⟩ := h5
+  have h6 : w ∈ A := by
+    rw [ssubset_def] at h3
+    replace h3 := h3.1
+    rw [subset_def] at h3
+    exact h3 w h5
+  rw [h1, mem_singleton] at h6
+  have h7 : A ⊂ z := by
+    rw [ssubset_def]
+    constructor
+    rw [subset_def]
+    intro u h8
+    rw [h1, mem_singleton] at h8
+    rw [← h8] at h6
+    rw [h6] at h5
+    exact h5
+    . rw [ssubset_def] at h3
+      obtain ⟨h31, h32 ⟩ := h3
+      exact h32.symm
+  have h8 := ssubset_trans (A) (z) A h7 h3
+  rw [ssubset_def] at h8
+  obtain ⟨h81, h82⟩ := h8
+  contradiction
+
+
+
 
 
 /-
@@ -848,38 +1530,112 @@ theorem SetTheory.Set.mem_coe (X:Set) (x:Object) : x ∈ (X : _root_.Set Object)
   simp
 
 /-- Compatibility of the emptyset -/
-theorem SetTheory.Set.coe_empty : ((∅:Set) : _root_.Set Object) = ∅ := by sorry
+theorem SetTheory.Set.coe_empty : ((∅:Set) : _root_.Set Object) = ∅ := by simp
 
 /-- Compatibility of subset -/
 theorem SetTheory.Set.coe_subset (X Y:Set) :
-    (X : _root_.Set Object) ⊆ (Y : _root_.Set Object) ↔ X ⊆ Y := by sorry
+    (X : _root_.Set Object) ⊆ (Y : _root_.Set Object) ↔ X ⊆ Y := by
+      simp
+      rw [subset_def]
 
 theorem SetTheory.Set.coe_ssubset (X Y:Set) :
-    (X : _root_.Set Object) ⊂ (Y : _root_.Set Object) ↔ X ⊂ Y := by sorry
+    (X : _root_.Set Object) ⊂ (Y : _root_.Set Object) ↔ X ⊂ Y := by
+      constructor
+      . intro h
+        rw [_root_.Set.ssubset_def] at h
+        simp at h
+        have ⟨h3,h4⟩ := h
+        obtain ⟨y,h6⟩ := h4
+        obtain ⟨h7,h8⟩ := h6
+        constructor
+        . intro x h1
+          exact h3 x h1
+        by_contra h5
+        rw [← h5] at h7
+        contradiction
+      intro ⟨h1, h2⟩
+      rw [_root_.Set.ssubset_def]
+      constructor
+      . exact (Set.coe_subset X Y).mpr h1
+      by_contra h3
+      simp at h3
+      rw [subset_def] at h1
+      have h4 : X = Y := by
+        ext y
+        constructor
+        . intro h
+          exact h1 y h
+        intro h
+        exact h3 y h
+      contradiction
 
 /-- Compatibility of singleton -/
-theorem SetTheory.Set.coe_singleton (x: Object) : (({x}:Set) : _root_.Set Object) = {x} := by sorry
+theorem SetTheory.Set.coe_singleton (x: Object) : (({x}:Set) : _root_.Set Object) = {x} := by simp
 
 /-- Compatibility of union -/
 theorem SetTheory.Set.coe_union (X Y: Set) :
-    ((X ∪ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∪ (Y : _root_.Set Object) := by sorry
+    ((X ∪ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∪ (Y : _root_.Set Object) := by
+    ext x
+    simp
 
 /-- Compatibility of pair -/
-theorem SetTheory.Set.coe_pair (x y: Object) : (({x, y}:Set) : _root_.Set Object) = {x, y} := by sorry
+theorem SetTheory.Set.coe_pair (x y: Object) : (({x, y}:Set) : _root_.Set Object) = {x, y} := by
+    ext z
+    simp
 
 /-- Compatibility of subtype -/
-theorem SetTheory.Set.coe_subtype (X: Set) :  (X : _root_.Set Object) = X.toSubtype := by sorry
+theorem SetTheory.Set.coe_subtype (X: Set) :  (X : _root_.Set Object) = X.toSubtype := by  simp
 
 /-- Compatibility of intersection -/
 theorem SetTheory.Set.coe_intersection (X Y: Set) :
-    ((X ∩ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∩ (Y : _root_.Set Object) := by sorry
+    ((X ∩ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) ∩ (Y : _root_.Set Object) := by
+      ext z
+      simp
 
 /-- Compatibility of set difference-/
 theorem SetTheory.Set.coe_diff (X Y: Set) :
-    ((X \ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) \ (Y : _root_.Set Object) := by sorry
+    ((X \ Y:Set) : _root_.Set Object) = (X : _root_.Set Object) \ (Y : _root_.Set Object) := by
+      ext z
+      simp
 
 /-- Compatibility of disjointness -/
 theorem SetTheory.Set.coe_Disjoint (X Y: Set) :
-    Disjoint (X : _root_.Set Object) (Y : _root_.Set Object) ↔ Disjoint X Y := by sorry
+    Disjoint (X : _root_.Set Object) (Y : _root_.Set Object) ↔ Disjoint X Y := by
+      unfold Disjoint
+      simp
+      constructor
+      . intro h1 x h3 h4
+        change x = ∅
+        change x ⊆ X at h3
+        change x ⊆ Y at h4
+        replace h3 := (coe_subset x X).mpr h3
+        replace h4 := (coe_subset x Y).mpr h4
+        have h5 := h1 h3 h4
+        rw [← coe_empty] at h5
+        exact (coe_inj' x ∅).mp h5
+      intro h1 x h2 h3
+      simp at h1
+      ext y
+      simp
+      by_contra h4
+      have h5 : (({y}:Set) : _root_.Set Object) ⊆  x := by
+        simp
+        exact h4
+      replace h2 :  (({y}:Set) : _root_.Set Object) ⊆ ((X:Set) : _root_.Set Object) := by
+        rw [_root_.Set.subset_def] at *
+        intro z h6
+        exact h2 z (h5 z h6)
+      replace h3 :  (({y}:Set) : _root_.Set Object) ⊆ ((Y:Set) : _root_.Set Object) := by
+        rw [_root_.Set.subset_def] at *
+        intro z h6
+        exact h3 z (h5 z h6)
+      simp only [coe_subset] at h2
+      simp only [coe_subset] at h3
+      have h6 := h1 h2 h3
+      change ({y}:Set) = ∅ at h6
+      have h7 : y ∈ ({y}:Set) := by simp
+      rw [h6] at h7
+      exact absurd h7 (by apply not_mem_empty y)
+
 
 end Chapter3
