@@ -773,6 +773,19 @@ theorem Function.inv_comp {A B:Set} (f: Function A B) (hf: f.bijective) :
 theorem Function.comp_fun_rewrite {X Y Z:Set} (f: Function X Y) (g: Function Y Z) (x : X):
     (g ○ f) x = g.to_fn (f.to_fn x) := by simp_all
 
+theorem union_left {X} (Y : Set) (y : X.toSubtype): y.val ∈ SetTheory.union_pair X Y := by
+    have h4 := SetTheory.Set.subset_union_left X Y
+    rw [SetTheory.Set.subset_def] at h4
+    exact h4 y.val y.property
+theorem union_right {Y : Set} (X:Set) (y : Y.toSubtype): y.val ∈ SetTheory.union_pair X Y := by
+    have h4 := SetTheory.Set.subset_union_right X Y
+    rw [SetTheory.Set.subset_def] at h4
+    exact h4 y.val y.property
+theorem inclusion_left{X Y : Set} (y : X.toSubtype) (z : y.val ∈ SetTheory.union_pair X Y): ((Function.inclusion (SetTheory.Set.subset_union_left X Y)).to_fn y) = ⟨y.val, z⟩ := by
+    simp_all
+theorem inclusion_right{X Y : Set} (y : Y.toSubtype) (z : y.val ∈ SetTheory.union_pair X Y): ((Function.inclusion (SetTheory.Set.subset_union_right X Y)).to_fn y) = ⟨y.val, z⟩ := by
+    simp_all
+
 open Classical in
 theorem Function.glue {X Y Z:Set} (hXY: Disjoint X Y) (f: Function X Z) (g: Function Y Z) :
     ∃! h: Function (X ∪ Y) Z, (h ○ Function.inclusion (SetTheory.Set.subset_union_left X Y) = f)
@@ -795,18 +808,6 @@ theorem Function.glue {X Y Z:Set} (hXY: Disjoint X Y) (f: Function X Z) (g: Func
           rw [← SetTheory.Set.mem_inter] at hneg4
           simp [hXY] at hneg4
         tauto
-      have union_left (y : X.toSubtype): y.val ∈ SetTheory.union_pair X Y := by
-          have h4 := SetTheory.Set.subset_union_left X Y
-          rw [SetTheory.Set.subset_def] at h4
-          exact h4 y.val y.property
-      have union_right (y : Y.toSubtype): y.val ∈ SetTheory.union_pair X Y := by
-          have h4 := SetTheory.Set.subset_union_right X Y
-          rw [SetTheory.Set.subset_def] at h4
-          exact h4 y.val y.property
-      have inclusion_left (y : X.toSubtype) (z : y.val ∈ SetTheory.union_pair X Y): ((inclusion (SetTheory.Set.subset_union_left X Y)).to_fn y) = ⟨y.val, z⟩ := by
-          simp_all
-      have inclusion_right (y : Y.toSubtype) (z : y.val ∈ SetTheory.union_pair X Y): ((inclusion (SetTheory.Set.subset_union_right X Y)).to_fn y) = ⟨y.val, z⟩ := by
-          simp_all
 
       have h1 : ∀ x: (SetTheory.union_pair X Y), ∃! y: Z, P x y := by
         simp
@@ -854,7 +855,7 @@ theorem Function.glue {X Y Z:Set} (hXY: Disjoint X Y) (f: Function X Z) (g: Func
             have h4 := SetTheory.Set.subset_union_left X Y
             rw [SetTheory.Set.subset_def] at h4
             exact h4 y.val h5
-          have h3 := inclusion_left y (union_left y)
+          have h3 := inclusion_left y (union_left Y y)
           rw [Function.comp_fun_rewrite]
           rw [h3]
           exact fn_left ⟨y, hu⟩ y.property
@@ -866,7 +867,7 @@ theorem Function.glue {X Y Z:Set} (hXY: Disjoint X Y) (f: Function X Z) (g: Func
           have h4 := SetTheory.Set.subset_union_right X Y
           rw [SetTheory.Set.subset_def] at h4
           exact h4 y.val h5
-        have h3 := inclusion_right y (union_right y)
+        have h3 := inclusion_right y (union_right X y)
         rw [Function.comp_fun_rewrite]
         rw [h3]
         exact fn_right ⟨y, hu⟩ y.property
@@ -896,11 +897,158 @@ theorem Function.glue {X Y Z:Set} (hXY: Disjoint X Y) (f: Function X Z) (g: Func
       simp at h8
       rw [h8]
 
+theorem SetTheory.Set.disjoint_intersection_exclusion (X Y:Set) : (Disjoint Y (X \ Y)) ∧ (Y ∪ (X \ Y) = X ∪ Y) ∧ ((X \ Y) ⊆ X)  := by
+  constructor
+  . rw [disjoint_iff]
+    exact inter_compl
+  constructor
+  . ext x
+    simp
+    tauto
+  rw [subset_def]
+  simp
+  tauto
+
+theorem Function.comp_fun_rewrite' {X Y Z:Set} (f: Function X Y) (g: Function Y Z) (x : X):
+    (g ○ f) x = g (f x) := by simp_all
 
 open Classical in
 theorem Function.glue' {X Y Z:Set} (f: Function X Z) (g: Function Y Z)
     (hfg : ∀ x : ((X ∩ Y): Set), f ⟨x.val, by aesop⟩ = g ⟨x.val, by aesop⟩)  :
     ∃! h: Function (X ∪ Y) Z, (h ○ Function.inclusion (SetTheory.Set.subset_union_left X Y) = f)
-    ∧ (h ○ Function.inclusion (SetTheory.Set.subset_union_right X Y) = g) := by sorry
+    ∧ (h ○ Function.inclusion (SetTheory.Set.subset_union_right X Y) = g) := by
+      have h1 := SetTheory.Set.disjoint_intersection_exclusion X Y
+      have ⟨ h2, h3, h4 ⟩ := h1
+      let inj := Function.inclusion (h4)
+      let f' := (f ○ inj)
+      have h5 := Function.glue h2 g f'
+      obtain ⟨f1, ⟨hf1, hf2⟩, hf1_unique⟩ := h5
+      have h6 : (X ∪ Y) ⊆ ( Y ∪ X \ Y ) := by
+        simp_all
+
+      have h10 {x}(h1: x ∈ X ∪ Y)(h2 : x ∉ Y): x ∈ X \ Y := by
+        simp at *
+        tauto
+      let hw : (X ∪ Y).toSubtype → (Y ∪ X \ Y).toSubtype := fun w =>
+        if hx : w.val ∈ Y then
+          (inclusion (SetTheory.Set.subset_union_left Y (X \ Y))) ⟨w, hx⟩
+        else  (inclusion (SetTheory.Set.subset_union_right Y (X \ Y))) ⟨w.val, h10 (w.property) hx⟩
+
+      let f3 := Function.mk_fn (fun w => hw w)
+      unfold Function.id at f3
+      let f2 := Function.mk_fn (fun w => (f1○f3) w)
+      apply ExistsUnique.intro f2
+      symm
+      have simplify_x {W:Set} {y : W.toSubtype}: (⟨↑y, Eq.mpr_prop (eq_true y.property) True.intro⟩ : W.toSubtype) = y := by
+        apply Subtype.ext
+        rfl
+      constructor
+      . rw [Function.eq_iff]
+        intro y
+        rw [Function.comp_fun_rewrite']
+        have h2 := (union_right X y)
+        have h1 := inclusion_right y h2
+        rw [h1]
+        unfold f2
+        simp
+        unfold f3
+        simp
+        unfold hw
+        simp only [y.property]
+        rw [dif_pos True.intro]
+        rw [simplify_x]
+        replace hf1 := congr($hf1 y)
+        rw [Function.comp_fun_rewrite'] at hf1
+        exact hf1
+      . rw [Function.eq_iff]
+        intro x
+        rw [Function.comp_fun_rewrite']
+        have h2 := (union_left Y x)
+        have h1 := inclusion_left x h2
+        rw [h1]
+        unfold f2
+        simp
+        unfold f3
+        simp
+        unfold hw
+        by_cases hv: x.val ∈ Y
+        .  simp only [hv]
+           rw [dif_pos True.intro]
+           have h11 : (⟨↑x, Eq.mpr_prop (eq_true hv) True.intro⟩ : Y.toSubtype) = ⟨x.val, hv⟩ := by
+              apply Subtype.ext
+              rfl
+           rw [h11]
+           replace hf1 := congr($hf1 ⟨↑x, hv⟩)
+           rw [Function.comp_fun_rewrite'] at hf1
+           rw [hf1]
+           have hw := (SetTheory.Set.mem_inter x.val X Y).mpr (And.intro x.property hv)
+           have hfg1 := hfg ⟨↑x, hw⟩
+           simp at hfg1
+           exact hfg1.symm
+        have hw := (SetTheory.Set.mem_sdiff x X Y).mpr (And.intro x.property hv)
+        simp only [hv]
+        rw [dif_neg (by simp)]
+        have h13 : (⟨↑x, h10 (⟨↑x, h2⟩ : (X ∪ Y).toSubtype).property (Eq.mpr_not (eq_false hv) (of_eq_true not_false_eq_true))⟩ : (X \ Y).toSubtype) = ⟨↑x, hw⟩ := by
+            apply Subtype.ext
+            rfl
+        rw [h13]
+        replace hf2 := congr($hf2  ⟨↑x, hw⟩)
+        rw [Function.comp_fun_rewrite'] at hf2
+        rw [hf2]
+        unfold f'
+        unfold inj
+        rw [Function.comp_fun_rewrite']
+        simp
+      intro g4 ⟨h21, h22⟩
+      rw [Function.eq_iff]
+      intro x
+      unfold f2
+      conv =>
+        rhs
+        simp
+        unfold f3
+        simp
+        unfold hw
+      by_cases h31 : x.val ∈ Y
+      . simp only [h31]
+        rw [dif_pos True.intro]
+        have hhh :  (⟨↑x, Eq.mpr_prop (eq_true h31) True.intro⟩ : Y.toSubtype) = ⟨x.val, h31⟩ := by
+            apply Subtype.ext
+            rfl
+        rw [hhh]
+        replace hf1 := congr($hf1 ⟨x.val, h31⟩)
+        rw [Function.comp_fun_rewrite'] at hf1
+        rw [hf1]
+        replace h22 := congr($h22 ⟨x.val, h31⟩)
+        rw [Function.comp_fun_rewrite'] at h22
+        rw [← h22]
+        simp
+      simp only [h31]
+      rw [dif_neg (by simp)]
+      have h32 := h10 x.property h31
+      have hhh : (⟨↑x, h10 x.property (Eq.mpr_not (eq_false h31) (of_eq_true not_false_eq_true))⟩ : (X \ Y).toSubtype) = ⟨↑x, h32⟩ := by
+          apply Subtype.ext
+          rfl
+      rw [hhh]
+      replace hf2 := congr($hf2 ⟨x.val, h32⟩)
+      rw [Function.comp_fun_rewrite'] at hf2
+      rw [hf2]
+      unfold f'
+      rw [Function.comp_fun_rewrite']
+      unfold inj
+      simp
+      have h33 : x.val ∈ X := by
+        rw [SetTheory.Set.mem_sdiff] at h32
+        exact h32.1
+      have hhhh : (⟨↑x, inclusion._proof_1 h4 ⟨↑x, h32⟩⟩ : X.toSubtype) = ⟨x, h33⟩ := by
+        apply Subtype.ext
+        rfl
+      rw [hhhh]
+      replace h21 := congr($h21 ⟨x, h33⟩)
+      rw [← h21]
+      rw [Function.comp_fun_rewrite']
+      simp
+
+
 
 end Chapter3
