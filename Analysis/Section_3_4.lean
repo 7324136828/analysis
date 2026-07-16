@@ -370,7 +370,8 @@ theorem SetTheory.Set.union_eq (A: Set) :
     (union A : _root_.Set Object) =
     ⋃₀ { S : _root_.Set Object | ∃ S':Set, S = S' ∧ (S':Object) ∈ A } := by
   ext;
-  simp [union_axiom, Set.mem_sUnion];
+  simp only [union_axiom];
+  simp only [Set.mem_sUnion];
   aesop
 
 /-- Indexed union -/
