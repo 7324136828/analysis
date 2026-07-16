@@ -1,6 +1,6 @@
 import Mathlib.Tactic
 import Analysis.Section_3_1
-
+set_option doc.verso.suggestions false
 /-!
 # Analysis I, Section 3.4: Images and inverse images
 
@@ -41,7 +41,15 @@ theorem SetTheory.Set.mem_image {X Y:Set} (f:X → Y) (S: Set) (y:Object) :
 
 /-- Alternate definition of image using axiom of specification -/
 theorem SetTheory.Set.image_eq_specify {X Y:Set} (f:X → Y) (S: Set) :
-    image f S = Y.specify (fun y ↦ ∃ x:X, x.val ∈ S ∧ f x = y) := by sorry
+    image f S = Y.specify (fun y ↦ ∃ x:X, x.val ∈ S ∧ f x = y) := by
+      ext x
+      constructor
+      . intro h
+        rw [mem_image] at *
+        grind [specification_axiom'']
+      intro h
+      rw [mem_image]
+      aesop
 
 /--
   Connection with Mathlib's notion of image.  Note the need to utilize the {name}`Subtype.val` coercion
@@ -49,29 +57,59 @@ theorem SetTheory.Set.image_eq_specify {X Y:Set} (f:X → Y) (S: Set) :
 -/
 theorem SetTheory.Set.image_eq_image {X Y:Set} (f:X → Y) (S: Set):
     (image f S: _root_.Set Object) = Subtype.val '' (f '' {x | x.val ∈ S}) := by
-  ext; simp; grind
+  ext;
+  simp;
+  grind
 
 theorem SetTheory.Set.image_in_codomain {X Y:Set} (f:X → Y) (S: Set) :
-    image f S ⊆ Y := by intro _ h; rw [mem_image] at h; grind
+    image f S ⊆ Y := by
+      intro x h;
+      rw [mem_image] at h;
+      obtain ⟨⟨y, yh⟩, ⟨h1, h2⟩⟩ := h
+      let rf := f ↑⟨y, yh⟩
+      have h1 : ↑(f ↑⟨y, yh⟩) ∈ Y := rf.property
+      rw [h2] at h1
+      exact h1
 
 /-- Example 3.4.2 -/
 abbrev f_3_4_2 : nat → nat := fun n ↦ (2*n:ℕ)
 
 theorem SetTheory.Set.image_f_3_4_2 : image f_3_4_2 {1,2,3} = {2,4,6} := by
-  ext; simp only [mem_image, mem_triple, f_3_4_2]
+  ext;
+  simp only [mem_image]
+  simp only [mem_triple]
+  simp only [f_3_4_2]
   constructor
-  · rintro ⟨_, (_ | _ | _), rfl⟩ <;> simp_all
-  rintro (_ | _ | _); map_tacs [use 1; use 2; use 3]
-  all_goals simp_all
+  · rintro ⟨_, (_ | _ | _), rfl⟩ <;>
+    simp_all
+  rintro (_ | _ | _);
+  map_tacs [use 1; use 2; use 3]
+  all_goals
+  simp_all
 
 /-- Example 3.4.3 is written using Mathlib's notion of image. -/
 example : (fun n:ℤ ↦ n^2) '' {-1,0,1,2} = {0,1,4} := by aesop
 
 theorem SetTheory.Set.mem_image_of_eval {X Y:Set} (f:X → Y) (S: Set) (x:X) :
-    x.val ∈ S → (f x).val ∈ image f S := by sorry
+    x.val ∈ S → (f x).val ∈ image f S := by
+      intro h
+      simp only [mem_image]
+      use x
 
 theorem SetTheory.Set.mem_image_of_eval_counter :
-    ∃ (X Y:Set) (f:X → Y) (S: Set) (x:X), ¬((f x).val ∈ image f S → x.val ∈ S) := by sorry
+    ∃ (X Y:Set) (f:X → Y) (S: Set) (x:X), ¬((f x).val ∈ image f S → x.val ∈ S) := by
+      let A := ({0, 1}:Set)
+      let B := ({0}:Set)
+      use A
+      use B
+      use (fun n:A ↦ ⟨0, by aesop⟩)
+      use B
+      use ⟨1, by aesop⟩
+      simp_all
+      use 0
+      unfold A B
+      simp_all
+
 
 /--
   Definition 3.4.4 (inverse images).
@@ -81,7 +119,8 @@ abbrev SetTheory.Set.preimage {X Y:Set} (f:X → Y) (U: Set) : Set := X.specify 
 
 @[simp]
 theorem SetTheory.Set.mem_preimage {X Y:Set} (f:X → Y) (U: Set) (x:X) :
-    x.val ∈ preimage f U ↔ (f x).val ∈ U := by rw [specification_axiom']
+    x.val ∈ preimage f U ↔ (f x).val ∈ U := by
+      rw [specification_axiom']
 
 /--
   A version of {name}`mem_preimage` that does not require {lean}`x` to be of type {lean}`X`.
@@ -89,36 +128,87 @@ theorem SetTheory.Set.mem_preimage {X Y:Set} (f:X → Y) (U: Set) (x:X) :
 theorem SetTheory.Set.mem_preimage' {X Y:Set} (f:X → Y) (U: Set) (x:Object) :
     x ∈ preimage f U ↔ ∃ x': X, x'.val = x ∧ (f x').val ∈ U := by
   constructor
-  . intro h; by_cases hx: x ∈ X
-    . use ⟨ x, hx ⟩; have := mem_preimage f U ⟨ _, hx ⟩; simp_all
-    . grind [specification_axiom]
-  . rintro ⟨ x', rfl, hfx' ⟩; rwa [mem_preimage]
+  . intro h;
+    by_cases hx: x ∈ X
+    . use ⟨ x, hx ⟩;
+      have := mem_preimage f U ⟨ _, hx ⟩;
+      simp_all
+    . simp only [preimage] at h
+      have h1 := specification_axiom h
+      contradiction
+  . rintro ⟨ x', rfl, hfx' ⟩;
+    rwa [mem_preimage]
 
 /-- Connection with Mathlib's notion of preimage. -/
 theorem SetTheory.Set.preimage_eq {X Y:Set} (f:X → Y) (U: Set) :
     ((preimage f U): _root_.Set Object) = Subtype.val '' (f⁻¹' {y | y.val ∈ U}) := by
-  ext; simp
+  ext;
+  simp
 
 theorem SetTheory.Set.preimage_in_domain {X Y:Set} (f:X → Y) (U: Set) :
-    (preimage f U) ⊆ X := by intro _ _; aesop
+    (preimage f U) ⊆ X := by
+      intro _ _;
+      aesop
 
 /-- Example 3.4.6 -/
 theorem SetTheory.Set.preimage_f_3_4_2 : preimage f_3_4_2 {2,4,6} = {1,2,3} := by
-  ext; simp only [mem_preimage', mem_triple, f_3_4_2]; constructor
-  · rintro ⟨x, rfl, (_ | _ | _)⟩ <;> simp_all <;> omega
-  rintro (rfl | rfl | rfl); map_tacs [use 1; use 2; use 3]
+  ext;
+  simp only [mem_preimage'];
+  simp only [mem_triple];
+  simp only [f_3_4_2]
+  constructor
+  · rintro ⟨x, rfl, (_ | _ | _)⟩ <;>
+    simp_all <;>
+    omega
+  rintro (rfl | rfl | rfl);
+  map_tacs [use 1; use 2; use 3]
   all_goals simp
 
 theorem SetTheory.Set.image_preimage_f_3_4_2 :
-    image f_3_4_2 (preimage f_3_4_2 {1,2,3}) ≠ {1,2,3} := by sorry
+    image f_3_4_2 (preimage f_3_4_2 {1,2,3}) ≠ {1,2,3} := by
+    intro h
+    have h2 : 1 ∈ ({1,2,3}:Set) := by simp
+    rw [← h] at h2
+    simp only [mem_image] at h2
+    have ⟨x, ⟨h4, h5⟩⟩ := h2
+    unfold f_3_4_2 at *
+    have h8 :  2 * nat_equiv.symm x ≠ 1 := by
+      omega
+    exfalso
+    apply h8
+    apply nat_equiv.injective
+    apply Subtype.ext
+    exact h5
+
+
+
+
+
 
 /-- Example 3.4.7 (using the Mathlib notion of preimage) -/
 example : (fun n:ℤ ↦ n^2) ⁻¹' {0,1,4} = {-2,-1,0,1,2} := by
-  ext; refine ⟨ ?_, by aesop ⟩; rintro (_ | _ | h)
+  ext;
+  refine ⟨ ?_, by aesop ⟩;
+  rintro (h | h | h)
+  on_goal 1 =>
+    have : 0 ^ 2 = (0:ℤ) := (by norm_num);
+    nth_rw 2 [←h] at this;
+    conv at this =>
+      rhs
+      simp
+    rw [sq_eq_sq_iff_eq_or_eq_neg] at this
+    simp at this
   on_goal 3 => have : 2 ^ 2 = (4:ℤ) := (by norm_num); rw [←h, sq_eq_sq_iff_eq_or_eq_neg] at this
   all_goals aesop
 
-example : (fun n:ℤ ↦ n^2) ⁻¹' ((fun n:ℤ ↦ n^2) '' {-1,0,1,2}) ≠ {-1,0,1,2} := by sorry
+example : (fun n:ℤ ↦ n^2) ⁻¹' ((fun n:ℤ ↦ n^2) '' {-1,0,1,2}) ≠ {-1,0,1,2} := by
+  have h1 : (2:ℤ) ∈ ({-1,0,1,2}: Finset ℤ) := by simp
+  have h3 : (-2:ℤ) ∉ ({-1,0,1,2}: Finset ℤ) := by simp
+  have h2 : -2 ∈ (fun n:ℤ ↦ n^2) ⁻¹' ((fun n:ℤ ↦ n^2) '' {-1,0,1,2}) := by simp
+  intro h
+  rw [h] at h2
+  contradiction
+
 
 instance SetTheory.Set.inst_pow : Pow Set Set where
   pow := pow
@@ -163,19 +253,56 @@ theorem SetTheory.Set.example_3_4_9 (F:Object) :
   have h1 := (f ⟨4, by simp⟩).property
   have h2 := (f ⟨7, by simp⟩).property
   simp [coe_of_fun_inj] at *
-  obtain _ | _ := h1 <;> obtain _ | _ := h2
+  obtain _ | _ := h1 <;>
+  obtain _ | _ := h2
   map_tacs [left; (right;left); (right;right;left); (right;right;right)]
-  all_goals ext ⟨_, hx⟩; simp at hx; grind
+  all_goals ext ⟨_, hx⟩;
+            simp at hx;
+            grind
+
+theorem SetTheory.Set.powerset_axiom_2 {X Y:Set} (F:(X ^ Y).toSubtype) :
+    ∃ f: Y → X, f = F.val := (SetTheory.Set.powerset_axiom F.val).mp F.property
+
+--  how can we denote this function f here?
+
+noncomputable def SetTheory.Set.underlying_powerset {X Y:Set} (F:(X ^ Y).toSubtype) : Y → X :=
+    (powerset_axiom_2 F).choose
 
 /-- Exercise 3.4.6 (i). One needs to provide a suitable definition of the power set here. -/
 def SetTheory.Set.powerset (X:Set) : Set :=
-  (({0,1} ^ X): Set).replace (P := sorry) (by sorry)
+  (({0,1} ^ X): Set).replace     (P := fun F y ↦ y = X.specify
+      (fun z ↦ ∃ f: X → ({0,1}:Set), (f:Object) = F.val ∧ f z = ⟨1, by simp⟩))
+    (by intro x y y' ⟨h1, h2⟩; rw [h1, h2])
 
 open Classical in
 /-- Exercise 3.4.6 (i) -/
 @[simp]
 theorem SetTheory.Set.mem_powerset {X:Set} (x:Object) :
-    x ∈ powerset X ↔ ∃ Y:Set, x = Y ∧ Y ⊆ X := by sorry
+    x ∈ powerset X ↔ ∃ Y:Set, x = Y ∧ Y ⊆ X := by
+      rw [powerset]
+      simp only [replacement_axiom]
+      constructor
+      . intro h
+        simp at h
+        obtain ⟨f, hf⟩ := h
+        use (X.specify fun z ↦ f z = ⟨1, by simp⟩)
+        simp_all
+        intro x hx
+        exact specification_axiom hx
+      simp_all
+      intro y h1 h2
+      let f : X.toSubtype → ({0, 1}:Set).toSubtype := fun (w:X.toSubtype) =>
+        if hx : w.val ∈ y then ⟨1, by simp⟩
+        else ⟨0, by simp⟩
+      use f
+      ext w
+      simp
+      unfold f
+      simp
+      intro h
+      rw [subset_def] at h2
+      exact h2 w h
+
 
 /-- Lemma 3.4.10 -/
 theorem SetTheory.Set.exists_powerset (X:Set) :
