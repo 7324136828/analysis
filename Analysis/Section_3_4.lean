@@ -307,7 +307,8 @@ theorem SetTheory.Set.mem_powerset {X:Set} (x:Object) :
 /-- Lemma 3.4.10 -/
 theorem SetTheory.Set.exists_powerset (X:Set) :
    ∃ (Z: Set), ∀ x, x ∈ Z ↔ ∃ Y:Set, x = Y ∧ Y ⊆ X := by
-  use powerset X; apply mem_powerset
+  use powerset X;
+  apply mem_powerset
 
 /- As noted in errata, Exercise 3.4.6 (ii) is replaced by Exercise 3.5.11. -/
 
@@ -322,9 +323,14 @@ theorem SetTheory.Set.powerset_of_triple (a b c x:Object) :
     ∨ x = ({a,c}:Set)
     ∨ x = ({b,c}:Set)
     ∨ x = ({a,b,c}:Set) := by
-  simp only [mem_powerset, subset_def, mem_triple]
+  simp only [mem_powerset]
+  simp only [subset_def]
+  simp only [mem_triple]
   refine ⟨ ?_, by aesop ⟩
-  rintro ⟨Y, rfl, hY⟩; by_cases a ∈ Y <;> by_cases b ∈ Y <;> by_cases c ∈ Y
+  rintro ⟨Y, rfl, hY⟩;
+  by_cases a ∈ Y <;>
+  by_cases b ∈ Y <;>
+  by_cases c ∈ Y
   on_goal 8 => left
   on_goal 4 => right; left
   on_goal 6 => right; right; left
@@ -333,7 +339,11 @@ theorem SetTheory.Set.powerset_of_triple (a b c x:Object) :
   on_goal 3 => right; right; right; right; right; left
   on_goal 5 => right; right; right; right; right; right; left
   on_goal 1 => right; right; right; right; right; right; right
-  all_goals congr; ext; simp; grind
+  all_goals
+  congr;
+  ext;
+  simp;
+  grind
 
 /-- Axiom 3.12 (Union) -/
 theorem SetTheory.Set.union_axiom (A: Set) (x:Object) :
@@ -342,13 +352,26 @@ theorem SetTheory.Set.union_axiom (A: Set) (x:Object) :
 /-- Example 3.4.12 -/
 theorem SetTheory.Set.example_3_4_12 :
     union { (({2,3}:Set):Object), (({3,4}:Set):Object), (({4,5}:Set):Object) } = {2,3,4,5} := by
-  sorry
+  ext x
+  simp_all
+  simp only [union_axiom]
+  simp_all
+  refine ⟨ ?_, by aesop ⟩
+  rintro ⟨w, ⟨h1,h2⟩⟩
+  rcases h2 with h2 | h2 | h2
+  all_goals
+  rw [h2] at h1
+  rw [mem_pair] at *
+  grind
+
 
 /-- Connection with Mathlib union -/
 theorem SetTheory.Set.union_eq (A: Set) :
     (union A : _root_.Set Object) =
     ⋃₀ { S : _root_.Set Object | ∃ S':Set, S = S' ∧ (S':Object) ∈ A } := by
-  ext; simp [union_axiom, Set.mem_sUnion]; aesop
+  ext;
+  simp [union_axiom, Set.mem_sUnion];
+  aesop
 
 /-- Indexed union -/
 abbrev SetTheory.Set.iUnion (I: Set) (A: I → Set) : Set :=
