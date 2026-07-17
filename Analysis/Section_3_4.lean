@@ -472,15 +472,36 @@ theorem SetTheory.Set.preimage_eq_image_of_inv {X Y V:Set} (f:X → Y) (f_inv: Y
 
 
 /- Exercise 3.4.2.  State and prove an assertion connecting `preimage f (image f S)` and `S`. -/
--- theorem SetTheory.Set.preimage_of_image {X Y:Set} (f:X → Y) (S: Set) (hS: S ⊆ X) : sorry := by sorry
+theorem SetTheory.Set.preimage_of_image {X Y:Set} (f:X → Y) (S: Set) (hS: S ⊆ X) : S ⊆ preimage f (image f S)  := by
+  intro x
+  simp_all
+  intro h
+  have h1 := (hS x h)
+  use h1
+  use x
+  constructor
+  . use h1
+  exact h
 
 /- Exercise 3.4.2.  State and prove an assertion connecting `image f (preimage f U)` and `U`.
 Interestingly, it is not needed for U to be a subset of Y. -/
--- theorem SetTheory.Set.image_of_preimage {X Y:Set} (f:X → Y) (U: Set) : sorry := by sorry
+theorem SetTheory.Set.image_of_preimage {X Y:Set} (f:X → Y) (U: Set) : image f (preimage f U) ⊆ U := by
+  intro x
+  simp_all
 
 /- Exercise 3.4.2.  State and prove an assertion connecting `preimage f (image f (preimage f U))` and `preimage f U`.
 Interestingly, it is not needed for U to be a subset of Y.-/
--- theorem SetTheory.Set.preimage_of_image_of_preimage {X Y:Set} (f:X → Y) (U: Set) : sorry := by sorry
+theorem SetTheory.Set.preimage_of_image_of_preimage {X Y:Set} (f:X → Y) (U: Set) : preimage f (image f (preimage f U)) = preimage f U  := by
+  ext x;
+  simp_all
+  constructor
+  . intro ⟨h1, ⟨a, ⟨h2, ⟨h3, h4⟩⟩⟩⟩
+    use h1
+    grind
+  intro ⟨h1, h2⟩
+  use h1
+  use x
+  use h1
 
 /--
   Exercise 3.4.3.
