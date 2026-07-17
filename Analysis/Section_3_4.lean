@@ -922,10 +922,59 @@ theorem SetTheory.Set.inter_iInter {I J:Set} (hI: I ≠ ∅) (hJ: J ≠ ∅) (A:
 
 /-- Exercise 3.4.11 -/
 theorem SetTheory.Set.compl_iUnion {X I: Set} (hI: I ≠ ∅) (A: I → Set) :
-    X \ iUnion I A = iInter I hI (fun α ↦ X \ A α) := by sorry
+    X \ iUnion I A = iInter I hI (fun α ↦ X \ A α) := by
+      ext x;
+      simp_all
+      constructor
+      . intro ⟨h1, h2⟩
+        constructor
+        . constructor
+          . tauto
+          unfold iUnion at h2
+          simp [mem_iUnion] at h2
+          let k := (nonempty_choose hI)
+          have h3 := h2 k k.property
+          grind
+        intro a b
+        constructor
+        . tauto
+        unfold iUnion at h2
+        simp [mem_iUnion] at h2
+        exact h2 a b
+      intro ⟨⟨h1, h2⟩, h3⟩
+      constructor
+      . tauto
+      unfold iUnion
+      simp [mem_iUnion]
+      intro y h
+      exact (h3 y h).2
+
+
 
 /-- Exercise 3.4.11 -/
 theorem SetTheory.Set.compl_iInter {X I: Set} (hI: I ≠ ∅) (A: I → Set) :
-    X \ iInter I hI A = iUnion I (fun α ↦ X \ A α) := by sorry
+    X \ iInter I hI A = iUnion I (fun α ↦ X \ A α) := by
+      ext x;
+      simp_all
+      constructor
+      . intro ⟨h1, h2⟩
+        unfold iUnion
+        simp [mem_iUnion]
+        constructor
+        . exact h1
+        let k := A (nonempty_choose hI)
+        by_cases h3 : x ∈ k
+        . have h4 := h2 h3
+          exact h4
+        tauto
+      unfold iUnion
+      simp [mem_iUnion]
+      intro h1 y h2 h3
+      constructor
+      . exact h1
+      intro h4
+      use y
+      use h2
+
 
 end Chapter3
