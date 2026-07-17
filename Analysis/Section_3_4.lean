@@ -430,7 +430,8 @@ noncomputable abbrev SetTheory.Set.iInter (I: Set) (hI: I ≠ ∅) (A: I → Set
 
 theorem SetTheory.Set.mem_iInter {I:Set} (hI: I ≠ ∅) (A: I → Set) (x:Object) :
     x ∈ iInter I hI A ↔ ∀ α:I, x ∈ A α := by
-  rw [iInter, iInter']
+  rw [iInter]
+  rw [iInter']
   simp
   intro h
   simp_all
@@ -811,26 +812,113 @@ theorem SetTheory.Set.partial_functions {X Y:Set} :
   pairwise union operation {kw (of := «term_∪_»)}`∪`.
 -/
 theorem SetTheory.Set.union_pair_exists (X Y:Set) : ∃ Z:Set, ∀ x, x ∈ Z ↔ (x ∈ X ∨ x ∈ Y) := by
-  sorry
+   use union {set_to_object X, set_to_object Y}
+   intro x
+   rw [union_axiom]
+   simp_all
+   aesop
 
 /-- Exercise 3.4.9 -/
 theorem SetTheory.Set.iInter'_insensitive {I:Set} (β β':I) (A: I → Set) :
-    iInter' I β A = iInter' I β' A := by sorry
+    iInter' I β A = iInter' I β' A := by
+    ext x;
+    unfold iInter'
+    simp_all
+
 
 /-- Exercise 3.4.10 -/
 theorem SetTheory.Set.union_iUnion {I J:Set} (A: (I ∪ J:Set) → Set) :
     iUnion I (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
     ∪ iUnion J (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
-    = iUnion (I ∪ J) A := by sorry
+    = iUnion (I ∪ J) A := by
+      ext x;
+      unfold iUnion
+      constructor
+      . intro h
+        rw [mem_union, union_axiom] at *
+        rcases h with h | h
+        . obtain ⟨S, ⟨hS1, hS2⟩⟩ := h
+          use S
+          constructor
+          . exact hS1
+          rw [replacement_axiom] at *
+          obtain ⟨y, hY⟩ := hS2
+          have h1 : y.val ∈ I ∪ J := (subset_union_left I J) y.val y.property
+          use ⟨y, h1⟩
+        rw [union_axiom] at *
+        obtain ⟨S, ⟨hS1, hS2⟩⟩ := h
+        use S
+        constructor
+        . exact hS1
+        rw [replacement_axiom] at *
+        obtain ⟨y, hY⟩ := hS2
+        have h1 : y.val ∈ I ∪ J := (subset_union_right I J) y.val y.property
+        use ⟨y, h1⟩
+      intro h
+      simp_all
+      rw [union_axiom, union_axiom] at *
+      have ⟨S, ⟨hS1, hS2⟩⟩ := h
+      rw [replacement_axiom] at *
+      obtain ⟨y, hY⟩ := hS2
+      have hYY := y.property
+      rw [mem_union] at hYY
+      rcases hYY with hYY | hYY
+      . apply Or.inl
+        use S
+        constructor
+        . exact hS1
+        rw [replacement_axiom] at *
+        use ⟨y, hYY⟩
+      apply Or.inr
+      use S
+      constructor
+      . exact hS1
+      rw [replacement_axiom] at *
+      use ⟨y, hYY⟩
 
 /-- Exercise 3.4.10 -/
-theorem SetTheory.Set.union_of_nonempty {I J:Set} (hI: I ≠ ∅) (hJ: J ≠ ∅) : I ∪ J ≠ ∅ := by sorry
+theorem SetTheory.Set.union_of_nonempty {I J:Set} (hI: I ≠ ∅) (hJ: J ≠ ∅) : I ∪ J ≠ ∅ := by
+    have ⟨x, hx⟩ := nonempty_def hI
+    have h1 := (subset_union_left I J) x hx
+    exact nonempty_of_inhabited h1
 
 /-- Exercise 3.4.10 -/
 theorem SetTheory.Set.inter_iInter {I J:Set} (hI: I ≠ ∅) (hJ: J ≠ ∅) (A: (I ∪ J:Set) → Set) :
     iInter I hI (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
     ∩ iInter J hJ (fun α ↦ A ⟨ α.val, by simp [α.property]⟩)
-    = iInter (I ∪ J) (union_of_nonempty hI hJ) A := by sorry
+    = iInter (I ∪ J) (union_of_nonempty hI hJ) A := by
+      ext x;
+      rw [mem_inter]
+      constructor
+      . intro ⟨h1, h2⟩
+        rw [iInter, iInter', specification_axiom''] at *
+        obtain ⟨U, hU⟩ := h1
+        obtain ⟨V, hV⟩ := h2
+        let u := nonempty_choose (hI)
+        let v := nonempty_choose (hJ)
+        let w := nonempty_choose (union_of_nonempty hI hJ)
+        have h3 : w.val ∈ I ∨ w.val ∈ J := by
+          have h4 := w.property
+          rw [mem_union] at h4
+          exact h4
+        simp_all
+        constructor
+        . grind
+        intro a h
+        have h1 := hU a
+        have h2 := hV a
+        rcases h with h | h
+        . exact h1 h
+        exact h2 h
+      intro h
+      constructor
+      . rw [iInter, iInter', specification_axiom''] at *
+        simp_all
+        obtain ⟨h1, h2⟩ := h
+        grind
+      simp_all
+      obtain ⟨h1, h2⟩ := h
+      grind
 
 /-- Exercise 3.4.11 -/
 theorem SetTheory.Set.compl_iUnion {X I: Set} (hI: I ≠ ∅) (A: I → Set) :
