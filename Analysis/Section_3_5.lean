@@ -3,6 +3,8 @@ import Analysis.Section_3_1
 import Analysis.Section_3_2
 import Analysis.Section_3_4
 
+set_option doc.verso.suggestions false
+
 /-!
 # Analysis I, Section 3.5: Cartesian products
 
@@ -281,8 +283,14 @@ example : ({1, 2}: Set) ×ˢ ({3, 4, 5}: Set) = ({
 noncomputable abbrev SetTheory.Set.prod_commutator (X Y:Set) : X ×ˢ Y ≃ Y ×ˢ X where
   toFun := fun z ↦ mk_cartesian (snd z) (fst z)
   invFun := fun z ↦ mk_cartesian (snd z) (fst z)
-  left_inv := sorry
-  right_inv := sorry
+  left_inv := by
+    unfold Function.LeftInverse
+    intro x
+    simp_all
+  right_inv := by
+    unfold Function.RightInverse
+    intro x
+    simp_all
 
 /-- Example 3.5.5. A function of two variables can be thought of as a function of a pair. -/
 noncomputable abbrev SetTheory.Set.curry_equiv {X Y Z:Set} : (X → Y → Z) ≃ (X ×ˢ Y → Z) where
@@ -304,18 +312,29 @@ abbrev SetTheory.Set.iProd {I: Set} (X: I → Set) : Set :=
 /-- Definition 3.5.6 -/
 theorem SetTheory.Set.mem_iProd {I: Set} {X: I → Set} (t:Object) :
     t ∈ iProd X ↔ ∃ x: ∀ i, X i, t = tuple x := by
-  simp only [iProd, specification_axiom'']; constructor
-  . intro ⟨ ht, x, h ⟩; use x
+  simp only [iProd];
+  simp only [specification_axiom'']
+  constructor
+  . intro ⟨ ht, x, h ⟩;
+    use x
   intro ⟨ x, hx ⟩
   have h : t ∈ (I.iUnion X)^I := by simp [hx]
   use h, x
 
 theorem SetTheory.Set.tuple_mem_iProd {I: Set} {X: I → Set} (x: ∀ i, X i) :
-    tuple x ∈ iProd X := by rw [mem_iProd]; use x
+    tuple x ∈ iProd X := by
+    rw [mem_iProd];
+    use x
 
 @[simp]
 theorem SetTheory.Set.tuple_inj {I:Set} {X: I → Set} (x y: ∀ i, X i) :
-    tuple x = tuple y ↔ x = y := by sorry
+    tuple x = tuple y ↔ x = y := by
+      refine ⟨?_, by aesop⟩
+      intro h
+      ext z;
+      simp_all
+      have h1 := congr($h z)
+      simp_all
 
 /-- Example 3.5.8. There is a bijection between {lean}`(X ×ˢ Y) ×ˢ Z` and {lean}`X ×ˢ (Y ×ˢ Z)`. -/
 noncomputable abbrev SetTheory.Set.prod_associator (X Y Z:Set) : (X ×ˢ Y) ×ˢ Z ≃ X ×ˢ (Y ×ˢ Z) where
@@ -324,47 +343,202 @@ noncomputable abbrev SetTheory.Set.prod_associator (X Y Z:Set) : (X ×ˢ Y) ×ˢ
   left_inv _ := by simp
   right_inv _ := by simp
 
+
+-- theorem x1 {i:Object} {X:Set}{x : Object} : x ∈ iProd (fun _:({i}:Set) ↦ X) → ∃y, y ∈ X := by
+--   intro h
+--   unfold iProd at h
+--   rw [specification_axiom''] at h
+--   obtain ⟨h1, h2⟩ := h
+--   obtain ⟨y, h3⟩ := h2
+--   rw [tuple] at h3
+--   simp at h3
+--   have hy : x = _ := h3
+--   let f := fun i_1 ↦ y i_1
+--   have h4 : f = f := by rfl
+--   have h5 : i ∈ ({i}:Set) := by simp
+--   have h6 := congr($h4 ⟨i, h5⟩)
+--   unfold f at h6
+--   let z : X.toSubtype := y ⟨i, h5⟩
+--   use z
+--   exact z.property
+
+-- abbrev SetTheory.Set.tuple {I:Set} {X: I → Set} (x: ∀ i, X i) : I → iUnion I X :=
+--   ((fun i ↦ ⟨ x i, by rw [mem_iUnion]; use i; exact (x i).property ⟩):I → iUnion I X)
+
+-- /-- Definition 3.5.6 -/
+-- abbrev SetTheory.Set.iProd {I: Set} (X: I → Set) : Set :=
+--   ((iUnion I X)^I).specify (fun t ↦ ∃ x : ∀ i, X i, t = tuple x)
+
+
 /--
   Example 3.5.10. I suspect most of the equivalences will require classical reasoning and only be
   defined non-computably, but would be happy to learn of counterexamples.
 -/
+-- from: https://github.com/gaearon/analysis-solutions/blob/e6967c4dba422e0e8596063fff4b8ceba65aa568/analysis/Analysis/Section_3_5.lean#L237
 noncomputable abbrev SetTheory.Set.singleton_iProd_equiv (i:Object) (X:Set) :
     iProd (fun _:({i}:Set) ↦ X) ≃ X where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun t ↦ ((mem_iProd t).mp t.property).choose ⟨i, by simp⟩
+  invFun := fun x ↦ ⟨tuple fun i ↦ x, by apply tuple_mem_iProd⟩
+  left_inv := by
+    intro x
+    have h := (mem_iProd x).mp x.property
+    obtain hx := h.choose_spec
+    ext
+    rw [hx]
+    rw [tuple_inj]
+    ext ⟨t,ht⟩
+    rw [mem_singleton] at ht
+    simp_rw [ht]
+  right_inv := by
+    intro x
+    simp_all
+    generalize_proofs h pf
+    have hx := h.choose_spec
+    rw [tuple_inj] at *
+    rw [← hx]
 
 /-- Example 3.5.10 -/
 abbrev SetTheory.Set.empty_iProd_equiv (X: (∅:Set) → Set) : iProd X ≃ Unit where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun t ↦ ()
+  invFun := fun x ↦ ⟨tuple fun i ↦ False.elim (not_mem_empty _ i.property), by apply tuple_mem_iProd⟩
+  left_inv := by
+    intro x
+    simp_all
+    ext
+    have h := (mem_iProd x).mp x.property
+    obtain hx := h.choose_spec
+    rw [hx]
+    rw [tuple_inj]
+    ext ⟨i, hi⟩
+    have h1 := not_mem_empty i
+    contradiction
+  right_inv := by
+    intro x
+    simp_all
 
 /-- Example 3.5.10 -/
 noncomputable abbrev SetTheory.Set.iProd_of_const_equiv (I:Set) (X: Set) :
     iProd (fun _:I ↦ X) ≃ (I → X) where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun t ↦ ((mem_iProd t).mp t.property).choose
+  invFun := fun x ↦ ⟨tuple x, by apply tuple_mem_iProd⟩
+  left_inv := by
+    intro x
+    simp_all
+    ext
+    have h := (mem_iProd x).mp x.property
+    obtain hx := h.choose_spec
+    conv =>
+      rhs
+      rw [hx]
+  right_inv := by
+    intro x
+    simp_all
+    generalize_proofs pf1 pf2 pf3
+    ext i
+    have h1 := pf1 i
+    rw [mem_iUnion] at h1
+    obtain ⟨a, ha⟩ := h1
+    have h2 := pf2 x i
+    have h3 := pf3.choose_spec
+    have h4 := congrFun h3 i
+    exact (congrArg Subtype.val h4).symm
+
+theorem SetTheory.Set.cartesian_eq {X Y:Set} {x:X} {y:Y} {z : X ×ˢ Y}: mk_cartesian (x) (y) = z ↔  (fst z) = x ∧ (snd z) = y := by
+  constructor
+  . intro h
+    rw [← h]
+    exact And.intro (fst_of_mk_cartesian x y) (snd_of_mk_cartesian x y)
+  intro ⟨h1, h2⟩
+  rw [← h1, ← h2]
+  exact mk_cartesian_fst_snd_eq z
 
 /-- Example 3.5.10 -/
 noncomputable abbrev SetTheory.Set.iProd_equiv_prod (X: ({0,1}:Set) → Set) :
     iProd X ≃ (X ⟨ 0, by simp ⟩) ×ˢ (X ⟨ 1, by simp ⟩) where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun t ↦
+    let x := ((mem_iProd t).mp t.property).choose
+    (mk_cartesian (x ⟨ 0, by simp ⟩) (x ⟨ 1, by simp ⟩))
+  invFun := fun z ↦ ⟨tuple (X:=X) (fun i ↦ by
+    have : i = ⟨0, by simp⟩ ∨ i = ⟨1, by simp⟩ := by aesop
+    if h : i = ⟨0, by simp⟩ then
+      rw [h];
+      exact (fst z)
+    else if h : i = ⟨1, by simp⟩ then
+      rw [h];
+      exact (snd z)
+    else aesop
+  ), by apply tuple_mem_iProd⟩
+  left_inv := by
+    intro t
+    have h := (mem_iProd _).mp t.property
+    have ht := h.choose_spec
+    ext
+    rw [ht, tuple_inj]
+    ext i
+    have : i = ⟨0, by simp⟩ ∨ i = ⟨1, by simp⟩ := by aesop
+    if h : i = ⟨0, by simp⟩ then
+      subst h;
+      simp_all
+    else if h : i = ⟨1, by simp⟩ then
+      subst h;
+       simp_all
+    else tauto
+  right_inv := by
+    intro x
+    simp_all
+    generalize_proofs pf1 pf2 pf3 pf4 pf5 pf6
+    apply cartesian_eq.mpr
+    rw [tuple_inj] at h1
+    rw [← h1]
+    simp_all
+
 
 /-- Example 3.5.10 -/
 noncomputable abbrev SetTheory.Set.iProd_equiv_prod_triple (X: ({0,1,2}:Set) → Set) :
     iProd X ≃ (X ⟨ 0, by simp ⟩) ×ˢ (X ⟨ 1, by simp ⟩) ×ˢ (X ⟨ 2, by simp ⟩) where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun t ↦
+    let x := ((mem_iProd t).mp t.property).choose
+    (mk_cartesian (x ⟨ 0, by simp ⟩) (mk_cartesian (x ⟨ 1, by simp ⟩) (x ⟨ 2, by simp ⟩)))
+  invFun := fun z ↦ ⟨tuple (X:=X) (fun i ↦ by
+    have : i = ⟨0, by simp⟩ ∨ i = ⟨1, by simp⟩ ∨ i = ⟨2, by simp⟩ := by aesop
+    if h : i = ⟨0, by simp⟩ then
+      rw [h];
+      exact (fst z)
+    else if h : i = ⟨1, by simp⟩ then
+      rw [h];
+      exact (fst (snd z))
+    else if h : i = ⟨2, by simp⟩ then
+      rw [h];
+      exact (snd (snd z))
+    else aesop
+  ), by apply tuple_mem_iProd⟩
+  left_inv := by
+    intro t
+    have h := (mem_iProd _).mp t.property
+    have ht := h.choose_spec
+    ext
+    rw [ht, tuple_inj]
+    ext i
+    have : i = ⟨0, by simp⟩ ∨ i = ⟨1, by simp⟩ ∨ i = ⟨2, by simp⟩ := by aesop
+    if h : i = ⟨0, by simp⟩ then
+      subst h;
+      simp_all
+    else if h : i = ⟨1, by simp⟩ then
+      subst h;
+      simp_all
+    else if h : i = ⟨2, by simp⟩ then
+      subst h;
+      simp_all
+    else tauto
+  right_inv := by
+    intro x
+    simp_all
+    generalize_proofs pf1 pf2 pf3 pf4 pf5 pf6 pf7 pf8
+    have h1 := pf8.choose_spec
+    rw [tuple_inj] at h1
+    rw [← h1]
+    simp_all
+
 
 /-- Connections with Mathlib's {name}`Set.pi` -/
 noncomputable abbrev SetTheory.Set.iProd_equiv_pi (I:Set) (X: I → Set) :

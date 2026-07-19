@@ -1,6 +1,7 @@
 import Mathlib.Tactic
 import Analysis.Section_3_1
 set_option doc.verso.suggestions false
+-- set_option pp.proofs true
 /-!
 # Analysis I, Section 3.4: Images and inverse images
 
