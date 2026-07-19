@@ -52,12 +52,117 @@ theorem OrderedPair.eq (x y x' y' : Object) :
 /-- Helper lemma for Exercise 3.5.1 -/
 lemma SetTheory.Set.pair_eq_singleton_iff {a b c: Object} : {a, b} = ({c}: Set) ↔
     a = c ∧ b = c := by
-  sorry
+  have h1 : c ∈ ({c}: Set) := by simp_all
+  have h2 : a ∈ ({a, b}: Set) := by simp_all
+  have h3 : b ∈ ({a, b}: Set) := by simp_all
+  constructor
+  . intro h
+    rw [h] at h2 h3
+    simp_all
+  intro ⟨h1, h2⟩
+  rw [h1, h2]
+  simp_all
+
+lemma SetTheory.Set.singleton_eq_iff (a b : Object) : {a} = ({b}:Set) ↔
+  a = b := by
+    have h1 : a ∈ ({a}:Set) := by simp
+    constructor
+    . intro h2
+      rw [h2, mem_singleton] at h1
+      exact h1
+    intro h2
+    rw [h2]
+
+
+lemma SetTheory.Set.pair_eq_singleton (a : Object) : {a, a} = ({a}:Set) := by simp
+
+lemma SetTheory.Set.pair_comm_eq (a b: Object) : {a, b} = ({b, a}:Set) := by
+  ext x;
+  refine ⟨by aesop, by aesop ⟩;
+
+lemma SetTheory.Set.pair_eq_pair_iff {a b c d: Object}: ({a, b} :Set) = ({c, d}: Set) ↔
+    (a = c ∧  b = d) ∨  (b = c ∧ a = d) := by
+      have h1: a ∈ ({a, b} :Set) := by simp
+      have h2: b ∈ ({a, b} :Set) := by simp
+      constructor
+      . intro h3
+        rw [h3] at h1 h2
+        rw [mem_pair] at *
+        rcases h1 with h1 | h1
+        . rcases h2 with h2 | h2
+          . rw [h1, h2] at h3
+            replace h3 := by simpa only [pair_eq_singleton, pair_eq_singleton_iff] using h3.symm
+            obtain ⟨h4, h5⟩ := h3
+            grind
+          grind
+        . rcases h2 with h2 | h2
+          . grind
+          rw [h1, h2] at h3
+          replace h3 := by simpa only [pair_eq_singleton, pair_eq_singleton_iff] using h3.symm
+          obtain ⟨h4, h5⟩ := h3
+          grind
+      intro h3
+      rcases h3 with h3 | h3
+      . obtain ⟨h4, h5⟩ := h3
+        grind
+      obtain ⟨h4, h5⟩ := h3
+      rw [h4, h5]
+      exact pair_comm_eq d c
+
+lemma simplify_or_1 {a b c : Object} : {a} = ({b}:Set) ∨ {a} =  ({b, c}:Set) → a = b ∨ (b = a ∧  c = a) := by
+  intro h1
+  rcases h1 with h1 | h1
+  . rw [singleton_eq_iff] at h1
+    exact Or.inl h1
+  replace h1 := pair_eq_singleton_iff.mp h1.symm
+  exact Or.inr h1
+
+lemma simplify_or_2 {a b c d: Object} : {a, b} =  ({c}:Set) ∨ {a, b} =  ({c, d}:Set) → (a = c ∧ b = c) ∨ ((a = c ∧ b = d) ∨ (b = c ∧ a = d)) := by
+  intro h1
+  rcases h1 with h1 | h1
+  . rw [pair_eq_singleton_iff] at h1
+    exact Or.inl h1
+  rw [pair_eq_pair_iff] at h1
+  exact Or.inr h1
+
 
 /-- Exercise 3.5.1, first part -/
 def OrderedPair.toObject : OrderedPair ↪ Object where
   toFun p := ({ (({p.fst}:Set):Object), (({p.fst, p.snd}:Set):Object) }:Set)
-  inj' := by sorry
+  inj' := by
+    intro a b h
+    apply (OrderedPair.eq a.fst a.snd b.fst b.snd).mpr
+    simp at h
+    have h1 : SetTheory.set_to_object {a.fst} ∈ ({SetTheory.set_to_object {a.fst}, SetTheory.set_to_object {a.fst, a.snd}}:Set) := by simp
+    have h2 : SetTheory.set_to_object {a.fst, a.snd} ∈ ({SetTheory.set_to_object {a.fst}, SetTheory.set_to_object {a.fst, a.snd}}:Set) := by simp
+    have h3 : SetTheory.set_to_object {b.fst} ∈ ({SetTheory.set_to_object {b.fst}, SetTheory.set_to_object {b.fst, b.snd}}:Set) := by simp
+    have h4 : SetTheory.set_to_object {b.fst, b.snd} ∈ ({SetTheory.set_to_object {b.fst}, SetTheory.set_to_object {b.fst, b.snd}}:Set) := by simp
+    rw [h] at h1 h2
+    rw [← h] at h3 h4
+    rw [mem_pair] at h1 h2 h3 h4
+    replace h1 :  {a.fst} = ({b.fst}:Set) ∨ {a.fst} =  ({b.fst, b.snd}:Set) := by simpa using h1
+    replace h2 :  {a.fst, a.snd} =  ({b.fst}:Set) ∨ {a.fst, a.snd} =  ({b.fst, b.snd}:Set) := by simpa using h2
+    replace h3 :  {b.fst} =  ({a.fst}:Set) ∨  {b.fst} =  ({a.fst, a.snd}:Set) := by simpa using h3
+    replace h4 :  {b.fst, b.snd} =  ({a.fst}:Set) ∨  {b.fst, b.snd} =  ({a.fst, a.snd}:Set) := by simpa using h4
+    replace h1 := simplify_or_1 h1
+    replace h2 := simplify_or_2 h2
+    replace h3 := simplify_or_1 h3
+    replace h4 := simplify_or_2 h4
+    rcases h1 with h1 | h1
+    rcases h2 with h2 | h2
+    rcases h3 with h3 | h3
+    rcases h4 with h4 | h4
+    . grind
+    grind
+    rcases h4 with h4 | h4
+    . grind
+    obtain ⟨⟨h5, h6⟩, ⟨h7, h8⟩ ⟩ := h2, h4
+    grind
+    grind
+    grind
+    grind
+
+
 
 instance OrderedPair.inst_coeObject : Coe OrderedPair Object where
   coe := toObject
