@@ -488,6 +488,7 @@ noncomputable abbrev SetTheory.Set.iProd_equiv_prod (X: ({0,1}:Set) → Set) :
     simp_all
     generalize_proofs pf1 pf2 pf3 pf4 pf5 pf6
     apply cartesian_eq.mpr
+    have h1 := pf6.choose_spec
     rw [tuple_inj] at h1
     rw [← h1]
     simp_all
@@ -539,6 +540,29 @@ noncomputable abbrev SetTheory.Set.iProd_equiv_prod_triple (X: ({0,1,2}:Set) →
     rw [← h1]
     simp_all
 
+lemma to_fun_iProd_equiv_pi {I:Set} {X: I → Set} (x: iProd X) : ∃y, y ∈ Set.pi .univ (fun i:I ↦ ((X i):_root_.Set Object)) := by
+  let h1 := ((mem_iProd _).mp x.property).choose
+  let fi :  I.toSubtype → Object  := fun i ↦ h1 i
+  use fi
+  grind
+
+-- theorem SetTheory.Set.tuple_mem_iProd {I: Set} {X: I → Set} (x: ∀ i, X i) :
+--     tuple x ∈ iProd X := by
+--     rw [mem_iProd];
+--     use x
+lemma inv_fun_iProd_equiv_pi {I:Set} {X: I → Set}  (x : Set.pi .univ (fun i:I ↦ ((X i):_root_.Set Object))): ∃y, y ∈ iProd X := by
+  have hx := x.property
+  unfold Set.univ at hx
+  unfold Set.pi at hx
+  simp only [Set.mem_setOf_eq] at hx
+  have hy : ∀ (i : I.toSubtype), x.val i ∈ X i := by
+    intro i
+    have h1 := hx i
+    simp at h1
+    exact h1
+  let hz : ∀ (i : I.toSubtype), X i := fun i ↦ ⟨x.val i, by exact hy i⟩
+  let ip := tuple_mem_iProd hz
+  use tuple hz
 
 /-- Connections with Mathlib's {name}`Set.pi` -/
 noncomputable abbrev SetTheory.Set.iProd_equiv_pi (I:Set) (X: I → Set) :
@@ -546,11 +570,19 @@ noncomputable abbrev SetTheory.Set.iProd_equiv_pi (I:Set) (X: I → Set) :
   toFun t := ⟨fun i ↦ ((mem_iProd _).mp t.property).choose i, by simp⟩
   invFun x :=
     ⟨tuple fun i ↦ ⟨x.val i, by have := x.property i; simpa⟩, by apply tuple_mem_iProd⟩
-  left_inv t := by ext; rw [((mem_iProd _).mp t.property).choose_spec, tuple_inj]
+  left_inv t := by
+    have h := ((mem_iProd _).mp t.property)
+    have ht := h.choose_spec
+    ext;
+    rw [ht]
   right_inv x := by
-    ext; dsimp
-    generalize_proofs _ h
-    rw [←(tuple_inj _ _).mp h.choose_spec]
+    ext y
+    simp_all
+    generalize_proofs pf1 pf2
+    have h1 := pf2.choose_spec
+    rw [tuple_inj] at h1
+    rw [← h1]
+
 
 
 /-
