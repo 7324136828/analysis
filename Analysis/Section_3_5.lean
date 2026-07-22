@@ -597,8 +597,11 @@ into the field of higher order category theory, which we will not pursue here.
 abbrev SetTheory.Set.Fin (n:ℕ) : Set := nat.specify (fun m ↦ (m:ℕ) < n)
 
 theorem SetTheory.Set.mem_Fin (n:ℕ) (x:Object) : x ∈ Fin n ↔ ∃ m, m < n ∧ x = m := by
-  rw [specification_axiom'']; constructor
-  . intro ⟨ h1, h2 ⟩; use ↑(⟨ x, h1 ⟩:nat); simp [h2]
+  rw [specification_axiom''];
+  constructor
+  . intro ⟨ h1, h2 ⟩;
+    use (⟨ x, h1 ⟩:nat)
+    simp [h2]
   intro ⟨ m, hm, h ⟩
   use (by rw [h, ←Object.ofnat_eq]; exact (m:nat).property)
   grind [Object.ofnat_eq''']
