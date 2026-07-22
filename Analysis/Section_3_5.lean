@@ -601,7 +601,7 @@ theorem SetTheory.Set.mem_Fin (n:ℕ) (x:Object) : x ∈ Fin n ↔ ∃ m, m < n 
   constructor
   . intro ⟨ h1, h2 ⟩;
     use (⟨ x, h1 ⟩:nat)
-    simp [h2]
+    simp_all
   intro ⟨ m, hm, h ⟩
   use (by rw [h, ←Object.ofnat_eq]; exact (m:nat).property)
   grind [Object.ofnat_eq''']
@@ -609,8 +609,11 @@ theorem SetTheory.Set.mem_Fin (n:ℕ) (x:Object) : x ∈ Fin n ↔ ∃ m, m < n 
 abbrev SetTheory.Set.Fin_mk (n m:ℕ) (h: m < n): Fin n := ⟨ m, by rw [mem_Fin]; use m ⟩
 
 theorem SetTheory.Set.mem_Fin' {n:ℕ} (x:Fin n) : ∃ m, ∃ h : m < n, x = Fin_mk n m h := by
-  choose m hm this using (mem_Fin _ _).mp x.property; use m, hm
-  simp [Fin_mk, ←Subtype.val_inj, this]
+  choose m hm this using (mem_Fin n x).mp x.property;
+  use m, hm
+  simp only [Fin_mk]
+  simp only [←Subtype.val_inj]
+  simp only [this]
 
 @[coe]
 noncomputable abbrev SetTheory.Set.Fin.toNat {n:ℕ} (i: Fin n) : ℕ := (mem_Fin' i).choose
@@ -621,19 +624,32 @@ noncomputable instance SetTheory.Set.Fin.inst_coeNat {n:ℕ} : CoeOut (Fin n) �
 theorem SetTheory.Set.Fin.toNat_spec {n:ℕ} (i: Fin n) :
     ∃ h : i < n, i = Fin_mk n i h := (mem_Fin' i).choose_spec
 
-theorem SetTheory.Set.Fin.toNat_lt {n:ℕ} (i: Fin n) : i < n := (toNat_spec i).choose
+
+theorem SetTheory.Set.Fin.toNat_lt {n:ℕ} (i: Fin n) : i < n := by
+  have ⟨x, hx⟩ := toNat_spec i
+  exact x
+
 
 @[simp]
 theorem SetTheory.Set.Fin.coe_toNat {n:ℕ} (i: Fin n) : ((i:ℕ):Object) = (i:Object) := by
-  set j := (i:ℕ); obtain ⟨ h, h':i = Fin_mk n j h ⟩ := toNat_spec i; rw [h']
+  set j := (i:ℕ);
+  obtain ⟨h1,h2⟩ := toNat_spec i;
+  rw [h2]
+
 
 @[simp low]
 lemma SetTheory.Set.Fin.coe_inj {n:ℕ} {i j: Fin n} : i = j ↔ (i:ℕ) = (j:ℕ) := by
   constructor
   · simp_all
-  obtain ⟨_, hi⟩ := toNat_spec i
-  obtain ⟨_, hj⟩ := toNat_spec j
-  grind
+  obtain ⟨li, hi⟩ := toNat_spec i
+  obtain ⟨lj, hj⟩ := toNat_spec j
+  intro h
+  rw [hi]
+  simp only [Fin_mk]
+  simp only [←Subtype.val_inj]
+  rw [h]
+  simp
+
 
 @[simp]
 theorem SetTheory.Set.Fin.coe_eq_iff {n:ℕ} (i: Fin n) {j:ℕ} : (i:Object) = (j:Object) ↔ i = j := by
