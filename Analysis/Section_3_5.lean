@@ -899,8 +899,40 @@ theorem SetTheory.Set.Tuple.eq {n:ℕ} (t t':Tuple n) :
 
 noncomputable abbrev SetTheory.Set.iProd_equiv_tuples (n:ℕ) (X: Fin n → Set) :
     iProd X ≃ { t:Tuple n // ∀ i, (t.x i:Object) ∈ X i } where
-  toFun := sorry
-  invFun := sorry
+  toFun := fun x ↦ by
+    have h1 := (mem_iProd x).mp x.property
+    set g := h1.choose
+    set Z := (Fin n).replace (P := fun x y ↦ y = g x  ) (by simp_all)
+    set x : (Fin n).toSubtype → Z.toSubtype := fun i ↦ ⟨g i, by aesop⟩
+    have surj : Function.Surjective x := by
+      unfold Function.Surjective
+      intro b
+      have h1 := b.property
+      unfold Z at h1
+      rw [replacement_axiom] at h1
+      obtain ⟨c, hc⟩ := h1
+      use c
+      unfold x
+      rw [← Subtype.val_inj]
+      exact hc.symm
+    set t : Tuple n := {
+        X := Z
+        x := x
+        surj := surj
+    }
+    exact ⟨t, by intro h;simp [t];unfold x;simp [(g h).property]⟩
+  invFun := fun t ↦ by
+    set tu := t.val
+    have ht := t.property
+    have h1 : ∀(i:(Fin n)), ↑(tu.x i) ∈ X i := by
+      intro i
+      have h2 := ht i
+      exact h2
+    set g : (i:(Fin n)) → (X i).toSubtype := fun i ↦ ⟨tu.x i, h1 i⟩
+    have h2 : tuple g ∈ iProd X := by
+      rw [mem_iProd]
+      use g
+    exact ⟨tuple g, h2⟩
   left_inv := sorry
   right_inv := sorry
 
