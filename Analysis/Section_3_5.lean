@@ -603,17 +603,24 @@ theorem SetTheory.Set.mem_Fin (n:ℕ) (x:Object) : x ∈ Fin n ↔ ∃ m, m < n 
     use (⟨ x, h1 ⟩:nat)
     simp_all
   intro ⟨ m, hm, h ⟩
-  use (by rw [h, ←Object.ofnat_eq]; exact (m:nat).property)
-  grind [Object.ofnat_eq''']
+  -- ∃ (h : x ∈ nat), nat_equiv.symm ⟨x, h⟩ < n
+  have h1 : x ∈ nat := by
+    rw [h]
+    have h2 := (m:nat).property
+    exact (m:nat).property
+  use h1
+  simp_all
 
 abbrev SetTheory.Set.Fin_mk (n m:ℕ) (h: m < n): Fin n := ⟨ m, by rw [mem_Fin]; use m ⟩
 
 theorem SetTheory.Set.mem_Fin' {n:ℕ} (x:Fin n) : ∃ m, ∃ h : m < n, x = Fin_mk n m h := by
-  choose m hm this using (mem_Fin n x).mp x.property;
-  use m, hm
-  simp only [Fin_mk]
-  simp only [←Subtype.val_inj]
-  simp only [this]
+  have h1 := (mem_Fin n x).mp x.property
+  obtain ⟨m, hm, this⟩ := h1;
+  use m
+  use hm
+  unfold Fin_mk
+  rw [←Subtype.val_inj]
+  exact this
 
 @[coe]
 noncomputable abbrev SetTheory.Set.Fin.toNat {n:ℕ} (i: Fin n) : ℕ := (mem_Fin' i).choose
@@ -626,15 +633,17 @@ theorem SetTheory.Set.Fin.toNat_spec {n:ℕ} (i: Fin n) :
 
 
 theorem SetTheory.Set.Fin.toNat_lt {n:ℕ} (i: Fin n) : i < n := by
-  have ⟨x, hx⟩ := toNat_spec i
-  exact x
-
+  obtain ⟨h1, h2⟩ := toNat_spec i
+  exact h1
 
 @[simp]
 theorem SetTheory.Set.Fin.coe_toNat {n:ℕ} (i: Fin n) : ((i:ℕ):Object) = (i:Object) := by
-  set j := (i:ℕ);
   obtain ⟨h1,h2⟩ := toNat_spec i;
-  rw [h2]
+  conv =>
+    rhs
+    rw [h2]
+
+
 
 
 @[simp low]
@@ -656,14 +665,19 @@ theorem SetTheory.Set.Fin.coe_eq_iff {n:ℕ} (i: Fin n) {j:ℕ} : (i:Object) = (
   constructor
   · intro h
     rw [Subtype.coe_eq_iff] at h
-    obtain ⟨_, rfl⟩ := h
+    obtain ⟨w, rfl⟩ := h
     simp [←Object.natCast_inj]
-  aesop
+  intro h
+  rw [←h]
+  simp
+
 
 @[simp]
 theorem SetTheory.Set.Fin.coe_eq_iff' {n m:ℕ} (i: Fin n) (hi : ↑i ∈ Fin m) : ((⟨i, hi⟩ : Fin m):ℕ) = (i:ℕ) := by
   obtain ⟨val, property⟩ := i
-  simp only [toNat, Subtype.mk.injEq, exists_prop]
+  rw [toNat, toNat]
+  simp only [Subtype.mk.injEq]
+  simp only [exists_prop]
   generalize_proofs h1 h2
   suffices : (h1.choose: Object) = h2.choose
   · aesop
@@ -677,14 +691,19 @@ theorem SetTheory.Set.Fin.toNat_mk {n:ℕ} (m:ℕ) (h: m < n) : (Fin_mk n m h : 
   rwa [Object.natCast_inj] at this
 
 abbrev SetTheory.Set.Fin_embed (n N:ℕ) (h: n ≤ N) (i: Fin n) : Fin N := ⟨ i.val, by
-  have := i.property; rw [mem_Fin] at *; grind
+  have := i.property;
+  rw [mem_Fin] at *;
+  grind
 ⟩
 
 /-- Connections with Mathlib's {lean}`Fin n` -/
 noncomputable abbrev SetTheory.Set.Fin.Fin_equiv_Fin (n:ℕ) : Fin n ≃ _root_.Fin n where
   toFun m := _root_.Fin.mk m (toNat_lt m)
   invFun m := Fin_mk n m.val m.isLt
-  left_inv m := (toNat_spec m).2.symm
+  left_inv m := by
+    have h1 := (toNat_spec m)
+    have h2 := h1.2.symm
+    simp_all
   right_inv m := by simp
 
 /-- Lemma 3.5.11 (finite choice) -/
@@ -696,28 +715,137 @@ theorem SetTheory.Set.finite_choice {n:ℕ} {X: Fin n → Set} (h: ∀ i, X i �
       rw [eq_empty_iff_forall_notMem]
       grind [specification_axiom'']
     have empty (i:Fin 0) : X i := False.elim (by rw [this] at i; exact not_mem_empty i i.property)
-    apply nonempty_of_inhabited (x := tuple empty); rw [mem_iProd]; use empty
+    apply nonempty_of_inhabited (x := tuple empty);
+    rw [mem_iProd];
+    use empty
   set X' : Fin n → Set := fun i ↦ X (Fin_embed n (n+1) (by linarith) i)
   have hX' (i: Fin n) : X' i ≠ ∅ := h _
-  choose x'_obj hx' using nonempty_def (hn hX')
-  rw [mem_iProd] at hx'; obtain ⟨ x', rfl ⟩ := hx'
+  have xxx := nonempty_def (hn hX')
+  choose x'_obj hx' using xxx
+  rw [mem_iProd] at hx';
+  obtain ⟨ x', rfl ⟩ := hx'
   set last : Fin (n+1) := Fin_mk (n+1) n (by linarith)
   choose a ha using nonempty_def (h last)
   have x : ∀ i, X i := fun i =>
     if h : i = n then
-      have : i = last := by ext; simpa [←Fin.coe_toNat, last]
+      have : i = last := by
+        ext;
+        simpa [←Fin.coe_toNat]
       ⟨a, by grind⟩
     else
-      have : i < n := lt_of_le_of_ne (Nat.lt_succ_iff.mp (Fin.toNat_lt i)) h
+      have h1 := Fin.toNat_lt i
+      have : i < n := lt_of_le_of_ne (Nat.lt_succ_iff.mp h1) h
       let i' := Fin_mk n i this
-      have : X i = X' i' := by simp [X', i', Fin_embed]
+      have : X i = X' i' := by
+        simp [X']
+        simp [i']
+        simp [Fin_embed]
       ⟨x' i', by grind⟩
   exact nonempty_of_inhabited (tuple_mem_iProd x)
+
+-- lemma simplify_or_3 {a b:Set} {c : Object} : a = b ∨ a =  (SetTheory.set_to_object {b, c}:Set) → a = b ∨ (SetTheory.set_to_object b ∈ a ∧  c ∈ a) := by
+--   intro h1
+--   rcases h1 with h1 | h1
+--   . exact Or.inl h1
+--   apply Or.inr
+--   rw [h1]
+--   simp
+
+
+-- lemma simplify_or_4 {c:Set} {a b d: Object} : {a, b} =  c ∨ {a, b} =  ({SetTheory.set_to_object c, d}:Set) → (a ∈ c ∧ b ∈ c) ∨ ((a = c ∧ b = d) ∨ (b = c ∧ a = d)) := by
+--   intro h1
+--   rcases h1 with h1 | h1
+--   . apply Or.inl
+--     rw [← h1]
+--     simp
+--   rw [pair_eq_pair_iff] at h1
+--   exact Or.inr h1
+
+lemma simplify_or_6 {a b c: Object} : (SetTheory.set_to_object ({a, b}:Set)) =  (SetTheory.set_to_object ({a, c}:Set)) → b = c := by
+  intro h
+  have h1 : b ∈ ({a, b}:Set) := by simp
+  have h2 := SetTheory.set_to_object.injective h
+  rw [h2] at h1
+  rw [mem_pair] at h1
+  rcases h1 with h1 | h1
+  . rw [h1] at h2
+    simp_all
+    have h3 : c ∈ ({a, c}:Set) := by simp
+    rw [← h2] at h3
+    rw [mem_singleton] at h3
+    exact h3.symm
+  exact h1
+
+lemma simplify_or_5 {a b c d: Object} : ({a, b}:Set) =  ({c, d}:Set) → (a = c ∧ b = d) ∨ (a = d ∧ b = c) := by
+  intro h
+  have h1 : a ∈ ({a, b}:Set) := by simp
+  rw [h] at h1
+  rw [mem_pair] at h1
+  rcases h1 with h1 | h1
+  . rw [h1] at h
+    have h2 := congrArg SetTheory.set_to_object h
+    replace h2 := simplify_or_6 h2
+    exact Or.inl (And.intro h1 h2)
+  rw [h1] at h
+  conv at h =>
+    rhs
+    rw [pair_comm_eq]
+  have h2 := congrArg SetTheory.set_to_object h
+  replace h2 := simplify_or_6 h2
+  exact Or.inr (And.intro h1 h2)
+
+lemma simplify_not_1 (a1 a2 b1 b2: Object) : ¬ (a1 = SetTheory.set_to_object {b1, b2} ∧ b1 = SetTheory.set_to_object {a1, a2}) := by
+  intro ⟨h1, h2⟩
+  let A : Set := {a1, b1}
+  have h3 : a1 ∈ A := by
+    unfold A
+    simp
+  have h4 := SetTheory.Set.axiom_of_regularity (nonempty_of_inhabited h3)
+  obtain ⟨x, hx⟩ := h4
+  have px := x.property
+  unfold A at px
+  rw [mem_pair] at px
+  rcases px with px | px
+  . simp [h1] at px
+    have h5 := (hx ({b1, b2}:Set)) px
+    unfold A at h5
+    rw [disjoint_iff] at h5
+    have h6 : b1 ∈  ({b1, b2}:Set) ∩ {a1, b1} := by
+      simp
+    rw [h5] at h6
+    have h7 := not_mem_empty b1
+    contradiction
+  simp [h2] at px
+  have h5 := (hx ({a1, a2}:Set)) px
+  unfold A at h5
+  rw [disjoint_iff] at h5
+  have h6 : a1 ∈  ({a1, a2}:Set) ∩ {a1, b1} := by
+    simp
+  rw [h5] at h6
+  have h7 := not_mem_empty a1
+  contradiction
+
 
 /-- Exercise 3.5.1, second part (requires axiom of regularity) -/
 abbrev OrderedPair.toObject' : OrderedPair ↪ Object where
   toFun p := ({ p.fst, (({p.fst, p.snd}:Set):Object) }:Set)
-  inj' := by sorry
+  inj' := by
+    unfold Function.Injective
+    rintro a b h
+    simp at h
+    apply (OrderedPair.eq a.fst a.snd b.fst b.snd).mpr
+    have h1 := simplify_or_5 h
+    rcases h1 with h1 | h1
+    . obtain ⟨h2, h3⟩ := h1
+      rw [h2] at h3
+      replace h3 := simplify_or_6 h3
+      exact And.intro h2 h3
+    obtain ⟨h2, h3⟩ := h1
+    replace h3 := h3.symm
+    have h4 := And.intro h2 h3
+    have h5 := simplify_not_1 a.fst a.snd b.fst b.snd
+    contradiction
+
 
 /-- An alternate definition of a tuple, used in Exercise 3.5.2 -/
 structure SetTheory.Set.Tuple (n:ℕ) where
@@ -735,11 +863,39 @@ lemma SetTheory.Set.Tuple.ext {n:ℕ} {t t':Tuple n}
     (hX : t.X = t'.X)
     (hx : ∀ n : Fin n, ((t.x n):Object) = ((t'.x n):Object)) :
     t = t' := by
-  have ⟨_, _, _⟩ := t; have ⟨_, _, _⟩ := t'; subst hX; congr; ext; grind
+  have ⟨X, x, surj⟩ := t;
+  have ⟨X', x', surj'⟩ := t';
+  subst hX;
+  congr;
+  ext;
+  grind
 
 /-- Exercise 3.5.2 -/
 theorem SetTheory.Set.Tuple.eq {n:ℕ} (t t':Tuple n) :
-    t = t' ↔ ∀ n : Fin n, ((t.x n):Object) = ((t'.x n):Object) := by sorry
+    t = t' ↔ ∀ n : Fin n, ((t.x n):Object) = ((t'.x n):Object) := by
+    have ht1 := t.surj
+    have ht2 := t'.surj
+    unfold Function.Surjective at ht1 ht2
+    constructor
+    . intro h m
+      rw [h]
+    intro h
+    apply ext
+    . ext x;
+      constructor
+      . intro h1
+        obtain ⟨a, ha⟩ := ht1 ⟨x, h1⟩
+        have hb := h a
+        simp [← Subtype.val_inj] at ha
+        rw [hb] at ha
+        grind
+      intro h1
+      obtain ⟨a, ha⟩ := ht2 ⟨x, h1⟩
+      have hb := h a
+      simp [← Subtype.val_inj] at ha
+      rw [← hb] at ha
+      grind
+    exact h
 
 noncomputable abbrev SetTheory.Set.iProd_equiv_tuples (n:ℕ) (X: Fin n → Set) :
     iProd X ≃ { t:Tuple n // ∀ i, (t.x i:Object) ∈ X i } where
