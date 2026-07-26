@@ -933,8 +933,27 @@ noncomputable abbrev SetTheory.Set.iProd_equiv_tuples (n:ℕ) (X: Fin n → Set)
       rw [mem_iProd]
       use g
     exact ⟨tuple g, h2⟩
-  left_inv := sorry
-  right_inv := sorry
+  left_inv := by
+    intro a
+    simp_all
+    generalize_proofs pf1 pf2
+    have h1 := pf1.choose_spec
+    rw [← Subtype.val_inj]
+    conv =>
+      rhs
+      rw [h1]
+  right_inv := by
+    intro a
+    simp_all
+    rw [← Subtype.val_inj]
+    apply (Tuple.eq _ _).mpr
+    intro n
+    simp_all
+    generalize_proofs pf1 pf2
+    have h1 := pf2.choose_spec
+    have h2 := (tuple_inj _ _).mp h1
+    rw [← h2]
+
 
 /--
   Exercise 3.5.3. The spirit here is to avoid direct rewrites (which make all of these claims
