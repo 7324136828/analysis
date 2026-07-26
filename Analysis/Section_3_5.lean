@@ -1378,29 +1378,180 @@ theorem SetTheory.Set.iProd_empty_iff {n:ℕ} {X: Fin n → Set} :
 
 /-- Exercise 3.5.9-/
 theorem SetTheory.Set.iUnion_inter_iUnion {I J: Set} (A: I → Set) (B: J → Set) :
-    (iUnion I A) ∩ (iUnion J B) = iUnion (I ×ˢ J) (fun p ↦ (A (fst p)) ∩ (B (snd p))) := by sorry
+    (iUnion I A) ∩ (iUnion J B) = iUnion (I ×ˢ J) (fun p ↦ (A (fst p)) ∩ (B (snd p))) := by
+      ext x;
+      constructor <;> intro h
+      . simp_all
+        obtain ⟨h1, h2⟩ := h
+        rw [mem_iUnion] at *
+        obtain ⟨⟨a, ha⟩, ⟨b, hb⟩⟩ := And.intro h1 h2
+        set ex := ((mk_cartesian a b))
+        use ex
+        simp_all
+      rw [mem_inter]
+      simp only [mem_iUnion] at *
+      obtain ⟨a, ha⟩ := h
+      rw [mem_inter] at ha
+      obtain ⟨h1, h2⟩ := ha
+      constructor
+      . use (fst a)
+      use (snd a)
 
 abbrev SetTheory.Set.graph {X Y:Set} (f: X → Y) : Set :=
   (X ×ˢ Y).specify (fun p ↦ (f (fst p) = snd p))
 
 /-- Exercise 3.5.10 -/
 theorem SetTheory.Set.graph_inj {X Y:Set} (f f': X → Y) :
-    graph f = graph f' ↔ f = f' := by sorry
+    graph f = graph f' ↔ f = f' := by
+      unfold graph at *
+      set f1 := fun p ↦ f (fst p) = snd p
+      set f2 := fun p ↦ f' (fst p) = snd p
+      set fXY := (X ×ˢ Y).specify f1
+      set f'XY := (X ×ˢ Y).specify f2
+      constructor <;> intro h
+      . ext x
+        set fxy := (mk_cartesian x (f x))
+        set f'xy := (mk_cartesian x (f' x))
+        have hxy : fxy.val ∈ fXY := by
+          unfold fxy
+          unfold fXY
+          unfold f1
+          rw [specification_axiom'']
+          simp_all
+          use x
+          constructor
+          . exact x.property
+          use (f x)
+          constructor
+          . exact (f x).property
+          unfold mk_cartesian
+          rfl
+        have h'xy : f'xy.val ∈ f'XY := by
+          unfold f'xy
+          unfold f'XY
+          unfold f2
+          rw [specification_axiom'']
+          simp_all
+          use x
+          constructor
+          . exact x.property
+          use (f' x)
+          constructor
+          . exact (f' x).property
+          unfold mk_cartesian
+          rfl
+        rw [h] at hxy
+        unfold f'XY at hxy
+        rw [specification_axiom''] at hxy
+        obtain ⟨z, hz⟩ := hxy
+        unfold f2 at hz
+        unfold fxy at hz
+        simp at hz
+        replace hz := hz.symm
+        rw [hz]
+      ext x;
+      refine ⟨ ?_, by aesop ⟩;
+      . intro h
+        unfold fXY f'XY f1 f2 at *
+        rw [specification_axiom''] at *
+        obtain ⟨a, ha⟩ := h
+        use a
+        rw [← ha]
+        replace h := h.symm
+        set z := fst ⟨x, a⟩
+        have h1 := congr($h z)
+        exact h1
+
 
 theorem SetTheory.Set.is_graph {X Y G:Set} (hG: G ⊆ X ×ˢ Y)
   (hvert: ∀ x:X, ∃! y:Y, ((⟨x,y⟩:OrderedPair):Object) ∈ G) :
-    ∃! f: X → Y, G = graph f := by sorry
+    ∃! f: X → Y, G = graph f := by
+    set f : X → Y := fun x ↦ (hvert x).choose
+    have h : G = graph f := by
+      ext z;
+      constructor <;> intro h
+      . simp only [graph]
+        rw [specification_axiom'']
+        use (hG z h)
+        set zg : (X ×ˢ Y).toSubtype := ⟨z, (hG z h)⟩
+        have ⟨y, ⟨h1, h2⟩⟩ := hvert (fst zg)
+        have h3 := h2 (snd zg)
+        unfold f
+        unfold fst
+        unfold zg
+        unfold snd
+        generalize_proofs pf1 pf2 pf3 pf4
+        have h4 := pf2.choose_spec
+        have h5 := pf3.choose_spec
+        have h6 := pf4.choose_spec
+        have h7 := h4.choose_spec
+        have h8 := h6.choose_spec
+        obtain ⟨h9, h10⟩ := h5
+        have h11 := h10 pf4.choose
+        conv at h8 =>
+          lhs
+          rw [h7]
+        have h12 := OrderedPair.toObject.injective h8
+        simp only [OrderedPair.eq] at h12
+        obtain ⟨h13, h14⟩ := h12
+        have h15 : OrderedPair.toObject { fst := ↑pf2.choose, snd := ↑pf4.choose } ∈ G := by
+          rw [h13]
+          rw [← h8]
+          rw [← h7]
+          exact h
+        exact (h11 h15).symm
+      . unfold graph at h
+        rw [specification_axiom''] at h
+        obtain ⟨h1, h2⟩ := h
+        set zg : (X ×ˢ Y).toSubtype := ⟨z, h1⟩
+        have h3 := hvert (fst zg)
+        obtain ⟨y, ⟨h5, h6⟩⟩ := h3
+        unfold f at h2
+        have ⟨h7, h8⟩ := (hvert (fst zg)).choose_spec
+        rw [h2] at h7 h8
+        have h9 := (h6 (snd zg)) (h7)
+        have h10 :  zg = mk_cartesian (fst zg) (snd zg) := by simp
+        unfold mk_cartesian at h10
+        rw [← Subtype.val_inj] at h10
+        simp at h10
+        rw [← h10] at h7
+        exact h7
+    apply ExistsUnique.intro f
+    . exact h
+    rintro g hg
+    rw [h] at hg
+    exact ((graph_inj f g).mp hg).symm
+
 
 /--
   Exercise 3.5.11. This trivially follows from {name}`SetTheory.Set.powerset_axiom`, but the
   exercise is to derive it from {name}`SetTheory.Set.exists_powerset` instead.
 -/
 theorem SetTheory.Set.powerset_axiom' (X Y:Set) :
-    ∃! S:Set, ∀(F:Object), F ∈ S ↔ ∃ f: Y → X, f = F := sorry
+    ∃! S:Set, ∀(F:Object), F ∈ S ↔ ∃ f: Y → X, f = F := by
+      sorry
+
+
+-- theorem SetTheory.Set.powerset_axiom'_trivial (X Y:Set) :
+--     ∃! S:Set, ∀(F:Object), F ∈ S ↔ ∃ f: Y → X, f = F := by
+--       have h1 := SetTheory.powerset_axiom X Y
+--       apply ExistsUnique.intro (pow X Y)
+--       . exact h1
+--       intro y hy
+--       ext x;
+--       constructor <;> intro h
+--       . have hz := (hy x).mp h
+--         have h2 := (h1 x).mpr hz
+--         exact h2
+--       have hz := (h1 x).mp h
+--       have h2 := (hy x).mpr hz
+--       exact h2
+
 
 /-- Exercise 3.5.12, with errata from web site incorporated -/
 theorem SetTheory.Set.recursion (X: Set) (f: nat → X → X) (c:X) :
-    ∃! a: nat → X, a 0 = c ∧ ∀ n, a (n + 1:ℕ) = f n (a n) := by sorry
+    ∃! a: nat → X, a 0 = c ∧ ∀ n, a (n + 1:ℕ) = f n (a n) := by
+        sorry
 
 /-- Exercise 3.5.13 -/
 theorem SetTheory.Set.nat_unique (nat':Set) (zero:nat') (succ:nat' → nat')
