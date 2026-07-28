@@ -1580,29 +1580,49 @@ theorem SetTheory.Set.is_graph {X Y G:Set} (hG: G ⊆ X ×ˢ Y)
 -/
 theorem SetTheory.Set.powerset_axiom' (X Y:Set) :
     ∃! S:Set, ∀(F:Object), F ∈ S ↔ ∃ f: Y → X, f = F := by
-      sorry
+    sorry
 
 
--- theorem SetTheory.Set.powerset_axiom'_trivial (X Y:Set) :
---     ∃! S:Set, ∀(F:Object), F ∈ S ↔ ∃ f: Y → X, f = F := by
---       have h1 := SetTheory.powerset_axiom X Y
---       apply ExistsUnique.intro (pow X Y)
---       . exact h1
---       intro y hy
---       ext x;
---       constructor <;> intro h
---       . have hz := (hy x).mp h
---         have h2 := (h1 x).mpr hz
---         exact h2
---       have hz := (h1 x).mp h
---       have h2 := (hy x).mpr hz
---       exact h2
+
 
 
 /-- Exercise 3.5.12, with errata from web site incorporated -/
 theorem SetTheory.Set.recursion (X: Set) (f: nat → X → X) (c:X) :
     ∃! a: nat → X, a 0 = c ∧ ∀ n, a (n + 1:ℕ) = f n (a n) := by
-        sorry
+      let fa : ℕ → X := Nat.rec c (fun n x ↦ f n x)
+      let a : nat → X  := fun x ↦ fa (nat_equiv.symm x)
+      have ha : a 0 = c ∧ ∀ n, a (n + 1:ℕ) = f n (a n) := by
+        constructor
+        . unfold a
+          unfold fa
+          simp
+        . intro n
+          unfold a
+          unfold fa
+          simp
+      apply ExistsUnique.intro a
+      exact ha
+      intro g ⟨h1, h2⟩
+      ext x;
+      --  ∀ (n : ℕ), g ↑(n + 1) = f (↑n) (g ↑n)
+      have h3 : ∀ (n : ℕ), g n = a n := by
+        intro n
+        induction' n with n nh
+        . have ha1 : a 0 = c := by simpa using ha.1
+          calc g ↑(0 : ℕ) = c := by simpa using h1
+            _ = a ↑(0 : ℕ) := by simpa using ha1.symm
+        . have h3 := h2 n
+          rw [h3]
+          rw [ha.2]
+          rw [nh]
+      have h4 := nat_equiv.surjective x
+      obtain ⟨n, h5⟩ := h4
+      rw [← h5]
+      rw [Subtype.val_inj]
+      exact h3 n
+
+-- a 0 = 0 ∧ ∀ n, a (n + 1:ℕ) = f n (a n)
+-- a (1:ℕ) = f 0 (a 0)
 
 /-- Exercise 3.5.13 -/
 theorem SetTheory.Set.nat_unique (nat':Set) (zero:nat') (succ:nat' → nat')
@@ -1612,18 +1632,170 @@ theorem SetTheory.Set.nat_unique (nat':Set) (zero:nat') (succ:nat' → nat')
     ∧ ∀ (n:nat) (n':nat'), f n = n' ↔ f (n+1:ℕ) = succ n' := by
   have nat_coe_eq {m:nat} {n} : (m:ℕ) = n → m = n := by aesop
   have nat_coe_eq_zero {m:nat} : (m:ℕ) = 0 → m = 0 := nat_coe_eq
-  obtain ⟨f, hf⟩ := recursion nat' sorry sorry
+  obtain ⟨f, hf⟩ := recursion nat' (fun x y ↦ succ y) zero
+  obtain ⟨⟨h2, h3⟩, h4⟩ := hf
   apply existsUnique_of_exists_of_unique
+  have con_of_ne: ∀ n m:nat', succ n = succ m  → n = m := by
+    intro n m
+    contrapose
+    exact succ_of_ne n m
   · use f
     constructor
     · constructor
       · intro x1 x2 heq
         induction' hx1: (x1:ℕ) with i ih generalizing x1 x2
-        · sorry
-        sorry
-      sorry
-    sorry
-  sorry
+        · have h1 := nat_coe_eq_zero hx1
+          rw [h1] at heq ⊢
+          rw [h2] at heq
+          replace heq := heq.symm
+          symm
+          by_contra ha; push_neg at ha
+          have h5 := _root_.Nat.eq_zero_or_eq_succ_pred x2
+          rcases h5 with h5 | h5
+          . obtain ⟨b, hb⟩ := nat_equiv.surjective x2
+            rw [← hb] at h5 ha
+            simp at h5
+            rw [h5] at ha
+            contradiction
+          . set b := (nat_equiv.symm x2).pred
+            have h6 := h3 b
+            set c := (b + 1)
+            have h7 : nat_equiv.symm x2 = c := by
+              rw [h5]
+            have h8 := congr(nat_equiv $h7)
+            simp at h8
+            have h9 := succ_ne (f ↑b)
+            rw [← h6] at h9
+            have h10 : ↑c = x2 := by
+              rw [h8]
+              rfl
+            rw [h10] at h9
+            contradiction
+        obtain ⟨a, ha⟩ := nat_equiv.surjective x1
+        obtain ⟨b, hb⟩ := nat_equiv.surjective x2
+        rw [← ha] at hx1
+        simp at hx1
+        have h5 := h3 i
+        rw [← hx1] at h5
+        replace ha := ha.symm
+        replace ha := congr(nat_equiv.symm $ha)
+        simp at ha
+        replace ha := nat_coe_eq ha
+        rw [← ha] at h5
+        rw [h5] at heq
+        replace h5 := _root_.Nat.eq_zero_or_eq_succ_pred x2
+        rcases h5 with h5 | h5
+        . replace h5 := nat_coe_eq_zero h5
+          rw [h5] at heq
+          rw [h2] at heq
+          have h6 := succ_ne (f ↑i)
+          contradiction
+        . set c := (nat_equiv.symm x2).pred
+          have h6 := h3 c
+          set d := (c+1)
+          have h7 : ↑d = x2 := by
+            unfold d
+            have h8 := congr(nat_equiv $h5)
+            simp at h8
+            rw [h8]
+            rfl
+          rw [h7] at h6
+          rw [h6] at heq
+          have h8 := succ_of_ne (f ↑i) (f ↑c)
+          have h9 := con_of_ne (f ↑i) (f ↑c)
+          have h10 := h9 heq
+          have h11 := ih h10
+          simp at h11
+          rw [hx1] at ha
+          unfold d at h7
+          replace h7 := h7.symm
+          replace h11 := congr($h11 + 1)
+          rw [← h11] at h7
+          rw [← h7] at ha
+          exact ha
+      apply ind
+      . use 0
+      intro n ⟨a, ha⟩
+      use (nat_equiv ((nat_equiv.symm a) + 1))
+      have h5 := h3 a
+      have h6 : ↑(nat_equiv.symm a) = a := by
+        simp
+      conv at h5 =>
+        rhs
+        rw [h6]
+        rw [ha]
+      have h7 : ↑(nat_equiv.symm a + 1) =  (nat_equiv (nat_equiv.symm a + 1)) := by
+        rfl
+      rw [h7] at h5
+      exact h5
+    constructor
+    . exact h2
+    intro n n'
+    constructor <;> intro h5
+    . have h6 := h3 n
+      have h7 : ↑(nat_equiv.symm n) = n := by
+        simp
+      conv at h6 =>
+        rhs
+        rw [h7]
+        rw [h5]
+      exact h6
+    have h6 := h3 n
+    rw [h6] at h5
+    have h9 := (con_of_ne (f ↑(nat_equiv.symm n)) n') h5
+    have h10 :  ↑(nat_equiv.symm n) = n := by
+      simp
+    rw [h10] at h9
+    exact h9
+  intro g1 g2 hg1 hg2
+  obtain ⟨hg11, hg12, hg13⟩ := hg1
+  obtain ⟨hg21, hg22, hg23⟩ := hg2
+  have hg111 : ∀ (n : ℕ), g1 n = f n := by
+    intro n
+    induction' n with n nh
+    . let z : nat.toSubtype := ↑(0 : ℕ)
+      change g1 z = f z
+      have h4 : z = 0 := by
+        unfold z
+        rfl
+      rw [h4]
+      rw [h2, hg12]
+    have h5 := (hg13 n (f ↑n)).mp nh
+    have h6 := h3 n
+    rw [← h6] at h5
+    have h7 : ↑(nat_equiv.symm ↑n + 1) = n + 1 := by
+      simp
+    rw [h7] at h5
+    exact h5
+  have hg222 :  ∀ (n : ℕ), g2 n = f n := by
+    intro n
+    induction' n with n nh
+    . let z : nat.toSubtype := ↑(0 : ℕ)
+      change g2 z = f z
+      have h4 : z = 0 := by
+        unfold z
+        rfl
+      rw [h4]
+      rw [h2, hg22]
+    have h5 := (hg23 n (f ↑n)).mp nh
+    have h6 := h3 n
+    rw [← h6] at h5
+    have h7 : ↑(nat_equiv.symm ↑n + 1) = n + 1 := by
+      simp
+    rw [h7] at h5
+    exact h5
+  ext n
+  rw [Subtype.val_inj]
+  obtain ⟨m, hm⟩ := nat_equiv.surjective n
+  have h5 := hg111 m
+  have h6 := hg222 m
+  rw [← h6] at h5
+  have h7 : n = ↑m := by
+    rw [← hm]
+    rfl
+  rw [← h7] at h5
+  exact h5
+
 
 
 end Chapter3
