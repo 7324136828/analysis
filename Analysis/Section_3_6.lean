@@ -125,7 +125,30 @@ theorem SetTheory.Set.EqualCard.refl (X:Set) : EqualCard X X := by
 
 @[symm]
 theorem SetTheory.Set.EqualCard.symm {X Y:Set} (h: EqualCard X Y) : EqualCard Y X := by
-  sorry
+  obtain ⟨g, hf⟩ := h
+  have h1 := hf.surjective
+  unfold Function.Surjective at h1
+  let f : Y → X := fun y ↦ (h1 y).choose
+  use f
+  constructor
+  . intro a1 a2 ha
+    unfold f at ha
+    have ha1 := (h1 a1).choose_spec
+    have ha2 := (h1 a2).choose_spec
+    simp at ha1
+    simp at ha2
+    rw [ha] at ha1
+    rw [ha1] at ha2
+    exact ha2
+  intro x
+  use (g x)
+  unfold f
+  generalize_proofs pf
+  have h2 := pf.choose_spec
+  have h3 := hf.injective
+  unfold  Function.Injective at h3
+  replace h3 := h3 h2
+  exact h3
 
 @[trans]
 theorem SetTheory.Set.EqualCard.trans {X Y Z:Set} (h1: EqualCard X Y) (h2: EqualCard Y Z) : EqualCard X Z := by
