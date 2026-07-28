@@ -42,7 +42,8 @@ theorem SetTheory.Set.Example_3_6_2 : EqualCard {0,1,2} {3,4,5} := by
   use open Classical in fun x ↦
     ⟨if x.val = 0 then 3 else if x.val = 1 then 4 else 5, by aesop⟩
   constructor
-  · intro; aesop
+  · intro;
+    aesop
   intro y
   have : y = (3: Object) ∨ y = (4: Object) ∨ y = (5: Object) := by
     have := y.property
@@ -53,11 +54,74 @@ theorem SetTheory.Set.Example_3_6_2 : EqualCard {0,1,2} {3,4,5} := by
   · use ⟨2, by simp⟩; aesop
 
 /-- Example 3.6.3 -/
-theorem SetTheory.Set.Example_3_6_3 : EqualCard nat (nat.specify (fun x ↦ Even (x:ℕ))) := by sorry
+theorem SetTheory.Set.Example_3_6_3 : EqualCard nat (nat.specify (fun x ↦ Even (x:ℕ))) := by
+  set Ev := nat.specify (fun x ↦ Even (x:ℕ))
+  let f : nat → Ev := fun x ↦ by
+    let y := nat_equiv (x + x)
+    have hy : y.val ∈ Ev := by
+      unfold Ev
+      rw [specification_axiom'']
+      unfold Even
+      use y.property
+      use x
+      unfold y
+      simp
+    exact ⟨y, hy⟩
+  use f
+  constructor
+  . intro a1 a2 h
+    unfold f at h
+    simp at h
+    rw [Subtype.val_inj] at h
+    simp at h
+    set x := nat_equiv.symm a1
+    set y := nat_equiv.symm a2
+    have hxy : x = y := by
+      omega
+    unfold x at hxy
+    unfold y at hxy
+    simp at hxy
+    exact hxy
+  intro n
+  have h1 := n.property
+  unfold Ev at h1
+  rw [specification_axiom''] at h1
+  unfold Even at h1
+  obtain ⟨h2, ⟨r, hr⟩⟩ := h1
+  use r
+  unfold f
+  simp
+  replace hr := congr(nat_equiv $hr.symm)
+  simp at hr
+  set y := (nat_equiv (r + r))
+  have h :  y.val ∈ Ev := by
+      unfold Ev
+      rw [specification_axiom'']
+      unfold Even
+      use y.property
+      use r
+      unfold y
+      simp
+  rw [← Subtype.val_inj] at hr
+  simp at hr
+  have h1 : ⟨y, h⟩ = n := by
+    rw [← Subtype.val_inj]
+    rw [hr]
+  exact h1
+
+
+
 
 @[refl]
 theorem SetTheory.Set.EqualCard.refl (X:Set) : EqualCard X X := by
-  sorry
+  let f : X → X := fun x ↦ x
+  use f
+  constructor
+  . intro a1 a2 ha
+    unfold f at ha
+    exact ha
+  intro y
+  use y
 
 @[symm]
 theorem SetTheory.Set.EqualCard.symm {X Y:Set} (h: EqualCard X Y) : EqualCard Y X := by
