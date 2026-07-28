@@ -152,7 +152,27 @@ theorem SetTheory.Set.EqualCard.symm {X Y:Set} (h: EqualCard X Y) : EqualCard Y 
 
 @[trans]
 theorem SetTheory.Set.EqualCard.trans {X Y Z:Set} (h1: EqualCard X Y) (h2: EqualCard Y Z) : EqualCard X Z := by
-  sorry
+  obtain ⟨f, hf⟩ := h1
+  obtain ⟨g, hg⟩ := h2
+  let fg : X → Z := fun x ↦ (g (f x))
+  use fg
+  have h1 := hf.surjective
+  have h2 := hg.surjective
+  have h3 := hf.injective
+  have h4 := hg.injective
+  unfold Function.Surjective at *
+  unfold Function.Injective at *
+  constructor
+  . intro a1 a2 ha
+    unfold fg at ha
+    exact h3 (h4 ha)
+  intro z
+  obtain ⟨y, hy⟩ := h2 z
+  obtain ⟨x, hx⟩ := h1 y
+  use x
+  unfold fg
+  aesop
+
 
 /-- Proposition 3.6.4 / Exercise 3.6.1 -/
 instance SetTheory.Set.EqualCard.inst_setoid : Setoid SetTheory.Set := ⟨ EqualCard, {refl, symm, trans} ⟩
