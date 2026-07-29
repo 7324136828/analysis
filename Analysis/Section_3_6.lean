@@ -182,11 +182,79 @@ abbrev SetTheory.Set.has_card (X:Set) (n:ℕ) : Prop := X ≈ Fin n
 
 theorem SetTheory.Set.has_card_iff (X:Set) (n:ℕ) :
     X.has_card n ↔ ∃ f: X → Fin n, Function.Bijective f := by
-  simp [has_card, HasEquiv.Equiv, instHasEquivOfSetoid, Setoid.r, EqualCard]
+  simp [has_card]
+  simp [HasEquiv.Equiv]
+  simp [instHasEquivOfSetoid]
+  simp [Setoid.r, EqualCard]
 
 /-- Remark 3.6.6 -/
 theorem SetTheory.Set.Remark_3_6_6 (n:ℕ) :
-    (nat.specify (fun x ↦ 1 ≤ (x:ℕ) ∧ (x:ℕ) ≤ n)).has_card n := by sorry
+    (nat.specify (fun x ↦ 1 ≤ (x:ℕ) ∧ (x:ℕ) ≤ n)).has_card n := by
+      set y := (nat.specify (fun x ↦ 1 ≤ (x:ℕ) ∧ (x:ℕ) ≤ n))
+      have h1 := (has_card_iff y n).mpr
+      apply h1
+      set f : y.toSubtype → Fin n := fun u ↦ by
+        have h2 := u.property
+        unfold y at h2
+        simp at h2
+        set a := nat_equiv ((nat_equiv.symm ⟨u.val, h2.1⟩).pred)
+        have h3 := h2.2.2
+        have h4 : a.val ∈ Fin n := by
+          unfold Fin
+          simp
+          constructor
+          . exact a.property
+          unfold a
+          simp
+          omega
+        exact ⟨a, h4⟩
+      use f
+      constructor
+      . intro a1 a2 ha
+        unfold f at ha
+        simp at ha
+        rw [Subtype.val_inj] at ha
+        simp at ha
+        have h7 := a1.property
+        have h8 := a2.property
+        unfold y at h7 h8
+        simp at h7 h8
+        obtain ⟨h9, ⟨h100, h101⟩⟩ := h7
+        obtain ⟨h11, ⟨h120, h121⟩⟩ := h8
+        have h5 : (⟨↑a1, (Eq.mp (specification_axiom''._simp_1 (fun x ↦ 1 ≤ nat_equiv.symm x ∧ nat_equiv.symm x ≤ n) ↑a1) a1.property).1⟩:nat) = ⟨↑a1, h9⟩ := by
+          simp
+        have h6 : (⟨↑a2, (Eq.mp (specification_axiom''._simp_1 (fun x ↦ 1 ≤ nat_equiv.symm x ∧ nat_equiv.symm x ≤ n) ↑a2) a2.property).1⟩:nat) = ⟨↑a2, h11⟩ := by
+          simp
+        rw [h5] at ha
+        rw [h6] at ha
+        have h13 :  nat_equiv.symm ⟨↑a1, h9⟩  = nat_equiv.symm ⟨↑a2, h11⟩ := by
+          omega
+        simp at h13
+        rw [Subtype.val_inj] at h13
+        exact h13
+      intro z
+      have h1 := z.property
+      unfold Fin at h1
+      simp at h1
+      obtain ⟨h2, h3⟩ := h1
+      set x := nat_equiv (nat_equiv.symm ⟨↑z, h2⟩ + 1)
+      have h4 : x.val ∈ y := by
+        unfold y
+        simp
+        constructor
+        . unfold x
+          simp
+        . constructor
+          . exact x.property
+          unfold x
+          simp
+          exact h3
+      use ⟨x, h4⟩
+      unfold f
+      simp
+      unfold x
+      simp
+
 
 /-- Example 3.6.7 -/
 theorem SetTheory.Set.Example_3_6_7a (a:Object) : ({a}:Set).has_card 1 := by
