@@ -261,20 +261,70 @@ theorem SetTheory.Set.Example_3_6_7a (a:Object) : ({a}:Set).has_card 1 := by
   rw [has_card_iff]
   use fun _ ↦ Fin_mk _ 0 (by simp)
   constructor
-  · intro x1 x2 hf; aesop
+  · intro x1 x2 hf
+    have h1 := x1.property
+    have h2 := x2.property
+    simp at h1
+    simp at h2
+    rw [← Subtype.val_inj]
+    rw [h1, h2]
   intro y
   use ⟨a, by simp⟩
   have := Fin.toNat_lt y
-  simp_all
+  simp
+  omega
 
 theorem SetTheory.Set.Example_3_6_7b {a b c d:Object} (hab: a ≠ b) (hac: a ≠ c) (had: a ≠ d)
     (hbc: b ≠ c) (hbd: b ≠ d) (hcd: c ≠ d) : ({a,b,c,d}:Set).has_card 4 := by
   rw [has_card_iff]
-  use open Classical in fun x ↦ Fin_mk _ (
-    if x.val = a then 0 else if x.val = b then 1 else if x.val = c then 2 else 3
-  ) (by aesop)
+  classical
+
+  set fx : ({a, b, c, d} : Set).toSubtype → ℕ :=
+    fun x ↦
+      if x.val = a then 0
+      else if x.val = b then 1
+      else if x.val = c then 2
+      else 3
+
+  have h1 {x : ({a, b, c, d} : Set).toSubtype} : fx x < 4 := by
+    have h2 := x.property
+    simp at h2
+    unfold fx
+    rcases h2 with h2 | h2 | h2 | h2
+    . rw [h2]
+      simp
+    . rw [h2]
+      simp
+      by_cases h3 : b = a
+      . simp [h3]
+      . simp [h3]
+    . rw [h2]
+      simp
+      by_cases h4 : c = a
+      . simp [h4]
+      . simp [h4]
+        by_cases h5 : c = b
+        . simp [h5]
+        . simp [h5]
+    . rw [h2]
+      simp
+      by_cases h6 : d = a
+      . simp [h6]
+      . simp [h6]
+        by_cases h7 : d = b
+        . simp [h7]
+        . simp [h7]
+          by_cases h8 : d = c
+          . simp [h8]
+          . simp [h8]
+  use fun x ↦ Fin_mk _ (fx x) h1
   constructor
-  · intro x1 x2 hf; aesop
+  · intro x1 x2 hf
+    simp at hf
+    unfold fx at hf
+    have h1 := x1.property
+    simp at h1
+    aesop
   intro y
   have : y = (0:ℕ) ∨ y = (1:ℕ) ∨ y = (2:ℕ) ∨ y = (3:ℕ) := by
     have := Fin.toNat_lt y
@@ -290,15 +340,45 @@ theorem SetTheory.Set.pos_card_nonempty {n:ℕ} (h: n ≥ 1) {X:Set} (hX: X.has_
   -- This proof is written to follow the structure of the original text.
   by_contra! this
   have hnon : Fin n ≠ ∅ := by
-    apply nonempty_of_inhabited (x := 0); rw [mem_Fin]; use 0, (by omega); rfl
+    apply nonempty_of_inhabited (x := 0);
+    rw [mem_Fin];
+    use 0, (by omega);
+    rfl
   rw [has_card_iff] at hX
   choose f hf using hX
-  sorry
+  obtain ⟨h1, h2⟩ := hf
+  have h3 : 0 ∈ Fin n := by
+    rw [mem_Fin]
+    use 0, (by omega);
+    rfl
+  have h4 := h2 ⟨0, h3⟩
+  obtain ⟨a, hfa⟩ := h4
+  have h5 := a.property
+  have h6 := nonempty_of_inhabited h5
+  contradiction
   -- obtain a contradiction from the fact that `f` is a bijection from the empty set to a
   -- non-empty set.
 
 /-- Exercise 3.6.2a -/
-theorem SetTheory.Set.has_card_zero {X:Set} : X.has_card 0 ↔ X = ∅ := by sorry
+theorem SetTheory.Set.has_card_zero {X:Set} : X.has_card 0 ↔ X = ∅ := by
+  constructor <;> intro h
+  . rw [has_card_iff] at h
+    obtain ⟨f, hf⟩ := h
+    by_contra h1
+    push_neg at h1
+    obtain ⟨x, hx⟩ := nonempty_def h1
+    have y := f ⟨x, hx⟩
+    have h2 := y.property
+    simp at h2
+  rw [has_card_iff]
+  use fun _ ↦ Fin_mk _ 0 (by aesop)
+  constructor
+  . intro a1 a2 hf
+    aesop
+  intro b
+  have h1 := b.property
+  simp at h1
+
 
 /-- Lemma 3.6.9 -/
 theorem SetTheory.Set.card_erase {n:ℕ} (h: n ≥ 1) {X:Set} (hX: X.has_card n) (x:X) :
