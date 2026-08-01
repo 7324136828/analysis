@@ -385,34 +385,215 @@ theorem SetTheory.Set.card_erase {n:ℕ} (h: n ≥ 1) {X:Set} (hX: X.has_card n)
     (X \ {x.val}).has_card (n-1) := by
   -- This proof has been rewritten from the original text to try to make it friendlier to
   -- formalize in Lean.
-  rw [has_card_iff] at hX; choose f hf using hX
+  rw [has_card_iff] at hX;
+  choose f hf using hX
   set X' : Set := X \ {x.val}
-  set ι : X' → X := fun ⟨y, hy⟩ ↦ ⟨ y, by aesop ⟩
-  observe hι : ∀ x:X', (ι x:Object) = x
-  choose m₀ hm₀ hm₀f using (mem_Fin _ _).mp (f x).property
-  set g : X' → Fin (n-1) := fun x' ↦
-    let := Fin.toNat_lt (f (ι x'))
-    let : (f (ι x'):ℕ) ≠ m₀ := by
-      by_contra!; simp [←this, Subtype.val_inj, hf.1.eq_iff, ι] at hm₀f
-      have := x'.property; aesop
-    if h' : f (ι x') < m₀ then Fin_mk _ (f (ι x')) (by omega)
-    else Fin_mk _ (f (ι x') - 1) (by omega)
-  have hg_def (x':X') : if (f (ι x'):ℕ) < m₀ then (g x':ℕ) = f (ι x') else (g x':ℕ) = f (ι x') - 1 := by
-    split_ifs with h' <;> simp [g,h']
-  have hg : Function.Bijective g := by sorry
+  set inj : X' → X := fun ⟨y, hy⟩ ↦ ⟨ y, by aesop ⟩
+  observe hinj : ∀ x:X', (inj x:Object) = x
+  have h1 := (mem_Fin _ _).mp (f x).property
+  choose m₀ hm₀ hm₀f using h1
+  set g : X' → Fin (n-1) := fun x' ↦ by
+    have h2:= Fin.toNat_lt (f (inj x'))
+    let h3: (f (inj x'):ℕ) ≠ m₀ := by
+      by_contra! h4
+      simp [←h4, Subtype.val_inj, hf.1.eq_iff] at hm₀f
+      simp [inj] at hm₀f
+      have h4 := x'.property;
+      unfold X' at h4
+      simp at h4
+      have h5 := h4.2
+      push_neg at h5
+      rw [← Subtype.val_inj] at hm₀f
+      rw [← hm₀f] at h5
+      contradiction
+    if h' : f (inj x') < m₀ then exact Fin_mk _ (f (inj x')) (by omega)
+    else exact Fin_mk _ (f (inj x') - 1) (by omega)
+  have hg_def (x':X') : if (f (inj x'):ℕ) < m₀ then (g x':ℕ) = f (inj x') else (g x':ℕ) = f (inj x') - 1 := by
+    split_ifs with h' <;>
+    simp [g,h']
+  have hg : Function.Bijective g := by
+    constructor
+    have hnem₀ (x : X'.toSubtype): (f (inj x):ℕ) ≠ m₀ := by
+      by_contra! h4
+      simp [←h4, Subtype.val_inj, hf.1.eq_iff] at hm₀f
+      simp [inj] at hm₀f
+      have h4 := x.property;
+      unfold X' at h4
+      simp at h4
+      have h5 := h4.2
+      push_neg at h5
+      rw [← Subtype.val_inj] at hm₀f
+      rw [← hm₀f] at h5
+      contradiction
+    . intro a1 a2 ha12
+      unfold g at ha12
+      simp only [] at ha12
+      split_ifs at ha12 with h1 h2 h3
+      . unfold Fin_mk at ha12
+        simp at ha12
+        rw [Subtype.val_inj] at ha12
+        have h4 := hf.1 ha12
+        unfold inj at h4
+        simp at h4
+        rw [Subtype.val_inj] at h4
+        exact h4
+      . unfold Fin_mk at ha12
+        simp at ha12
+        have h3 : f (inj a1) < ((f (inj a2)):ℕ) - 1 := by
+          push_neg at h2
+          have h4 := hnem₀ a2
+          have : m₀ ≤  ((f (inj a2)):ℕ) - 1 := by omega
+          omega
+        rw [ha12] at h3
+        simp at h3
+      . unfold Fin_mk at ha12
+        replace ha12 := ha12.symm
+        simp at ha12
+        replace ha12 := ha12.symm
+        have h5 : f (inj a2) < ((f (inj a1)):ℕ) - 1 := by
+          push_neg at h1
+          have h4 := hnem₀ a1
+          have : m₀ ≤  ((f (inj a1)):ℕ) - 1 := by omega
+          omega
+        rw [ha12] at h5
+        simp at h5
+      . unfold Fin_mk at ha12
+        simp at ha12
+        have h5 : m₀ ≥ 0 := by omega
+        have h51 := hnem₀ a1
+        have h52 := hnem₀ a2
+        push_neg at h1
+        push_neg at h3
+        have h53 : 1 ≤ (f (inj a1) : ℕ) := by omega
+        have h54 : 1 ≤ (f (inj a2) : ℕ) := by omega
+        have h6 : ((f (inj a1)):ℕ) = ((f (inj a2)):ℕ) := by omega
+        have h7 : (f (inj a1)) = (f (inj a2)) := by
+          simp
+          exact h6
+        have h4 := hf.1 h7
+        unfold inj at h4
+        simp at h4
+        rw [Subtype.val_inj] at h4
+        exact h4
+    . intro m
+      have h2 := hf.2
+      have hcase_1 : m.val ∈ Fin n := by
+        have h2 := m.property
+        rw [mem_Fin] at *
+        obtain ⟨x, ⟨h4, h5⟩⟩ := h2
+        use x
+        constructor
+        . omega
+        simpa using h5
+      have hcase_2 : ↑((m:ℕ) + 1) ∈ Fin n := by
+        have h3 := m.property
+        rw [mem_Fin] at *
+        obtain ⟨x, ⟨h4, h5⟩⟩ := h3
+        use (x+1)
+        constructor
+        . omega
+        simpa using h5
+      set mm : ℕ := ((m:ℕ) + 1)
+      by_cases hcase : m < m₀
+      . have ⟨a, hfa⟩ := hf.2 ⟨m, hcase_1⟩
+        have h2 : a.val ∈ X':= by
+          unfold X'
+          simp
+          constructor
+          . exact a.property
+          intro hx
+          rw [Subtype.val_inj] at hx
+          rw [hx] at hfa
+          rw [← Subtype.val_inj] at hfa
+          rw [hm₀f] at hfa
+          set b := (m:ℕ)
+          simp at hfa
+          have h3 : b = m.val := by
+            unfold b
+            simp
+          rw [← h3] at hfa
+          simp at hfa
+          rw [hfa] at hcase
+          simp at hcase
+        use ⟨a, h2⟩
+        unfold g
+        simp
+        have h4 := hinj ⟨↑a, h2⟩
+        rw [Subtype.val_inj] at h4
+        have h3 : f (inj ⟨↑a, h2⟩) < m₀ := by
+          rw [h4]
+          rw [hfa]
+          simp
+          exact hcase
+        conv =>
+          lhs
+          simp [h3]
+        rw [h4]
+        rw [hfa]
+        simp
+      . push_neg at hcase
+        have h1 : m₀ < mm := by omega
+        set c : Object := ↑mm
+        have ⟨a, hfa⟩ := hf.2 ⟨c, hcase_2⟩
+        have h2 : a.val ∈ X':= by
+          unfold X'
+          simp
+          constructor
+          . exact a.property
+          intro hx
+          rw [Subtype.val_inj] at hx
+          rw [hx] at hfa
+          rw [← Subtype.val_inj] at hfa
+          rw [hm₀f] at hfa
+          simp at hfa
+          have h3 : mm = c := by
+            unfold c
+            simp
+          rw [← h3] at hfa
+          simp at hfa
+          rw [hfa] at hcase
+          unfold mm at hcase
+          simp at hcase
+        use ⟨a, h2⟩
+        unfold g
+        simp
+        have hval : (f a : ℕ) = mm := by
+            rw [← Object.natCast_inj, Fin.coe_toNat, hfa];
+        have h4 : m₀ < f a := by
+          omega
+        have heq := hinj ⟨↑a, h2⟩
+        rw [Subtype.val_inj] at heq
+        have h5 : ¬ f (inj ⟨↑a, h2⟩) < m₀ := by rw [heq]; omega
+        conv =>
+          lhs
+          simp [h5]
+        rw [heq, hfa]
+        have hcval : (f a : ℕ) - 1 = ↑m := by
+          rw [← Object.natCast_inj, Fin.coe_toNat]
+          rw [hval]
+          unfold mm
+          simp
+        rw [hfa] at hcval
+        exact hcval
   use g
 
 /-- Proposition 3.6.8 (Uniqueness of cardinality) -/
 theorem SetTheory.Set.card_uniq {X:Set} {n m:ℕ} (h1: X.has_card n) (h2: X.has_card m) : n = m := by
   -- This proof is written to follow the structure of the original text.
-  revert X m; induction' n with n hn
-  . intro _ _ h1 h2; rw [has_card_zero] at h1; contrapose! h1
-    apply pos_card_nonempty _ h2; omega
+  revert X m;
+  induction' n with n hn
+  . intro X m h1 h2;
+    rw [has_card_zero] at h1;
+    contrapose! h1
+    apply pos_card_nonempty (by omega) h2;
   intro X m h1 h2
-  have : X ≠ ∅ := pos_card_nonempty (by omega) h1
-  choose x hx using nonempty_def this
-  have : m ≠ 0 := by contrapose! this; simpa [has_card_zero, this] using h2
-  specialize hn (card_erase ?_ h1 ⟨ _, hx ⟩) (card_erase ?_ h2 ⟨ _, hx ⟩) <;> omega
+  have h3 : X ≠ ∅ := pos_card_nonempty (by omega) h1
+  choose x hx using nonempty_def h3
+  have : m ≠ 0 := by
+    contrapose! h3;
+    simpa [has_card_zero, h3] using h2
+  specialize hn (card_erase ?_ h1 ⟨ _, hx ⟩) (card_erase ?_ h2 ⟨ _, hx ⟩) <;>
+  omega
 
 lemma SetTheory.Set.Example_3_6_8_a: ({0,1,2}:Set).has_card 3 := by
   rw [has_card_iff]
@@ -451,7 +632,64 @@ abbrev SetTheory.Set.finite (X:Set) : Prop := ∃ n:ℕ, X.has_card n
 abbrev SetTheory.Set.infinite (X:Set) : Prop := ¬ finite X
 
 /-- Exercise 3.6.3, phrased using Mathlib natural numbers -/
-theorem SetTheory.Set.bounded_on_finite {n:ℕ} (f: Fin n → nat) : ∃ M, ∀ i, (f i:ℕ) ≤ M := by sorry
+theorem SetTheory.Set.bounded_on_finite {n:ℕ} (f: Fin n → nat) : ∃ M, ∀ i, (f i:ℕ) ≤ M := by
+  induction' n with n hn
+  . use (nat_equiv.symm 0)
+    intro x
+    have hx := x.property
+    simp at hx
+  have h (x : (Fin n).toSubtype): x.val ∈ (Fin (n+1)) := by
+    have h1 := x.property
+    rw [mem_Fin] at *
+    obtain ⟨m, ⟨h2, h3⟩⟩ := h1
+    use m
+    constructor
+    . omega
+    exact h3
+  let g :  (Fin n).toSubtype → nat.toSubtype := fun x ↦ f ⟨x.val, h x⟩
+  have ⟨M, hM⟩ := hn g
+  set np := Fin_mk (n+1) n (by omega)
+  set N := f np
+  have hneg0 (x : (Fin (n + 1)).toSubtype) (h : x < n) : x.val ∈ (Fin n) := by
+    rw [mem_Fin] at *
+    use x
+    constructor
+    . exact h
+    simp
+  have hneg1 (x : (Fin (n + 1)).toSubtype) (h : x < n) : f x = g ⟨x.val, hneg0 x h⟩ := by
+    unfold g
+    simp
+  have hneg2 (x : (Fin (n + 1)).toSubtype) (h : x < n) : (f x:ℕ) ≤ M := by
+    have h1 := hneg1 x h
+    rw [h1]
+    exact hM ⟨x.val, hneg0 x h⟩
+  by_cases h1 : M ≤ N
+  . use N
+    intro x
+    by_cases h2 : x = np
+    . rw [h2]
+    . push_neg at h2
+      simp at h2
+      have h3 := x.property
+      have h4 := Fin.toNat_lt x
+      have h5 : ↑x < n  := by omega
+      have h6 := hneg2 x h5
+      have h7 := le_trans h6 h1
+      exact h7
+  . use M
+    push_neg at h1
+    intro x
+    by_cases h2 : x = np
+    . rw [h2]
+      change nat_equiv.symm N ≤ M
+      omega
+    . push_neg at h2
+      simp at h2
+      have h3 := x.property
+      have h4 := Fin.toNat_lt x
+      have h5 : ↑x < n  := by omega
+      have h6 := hneg2 x h5
+      exact h6
 
 /-- Theorem 3.6.12 -/
 theorem SetTheory.Set.nat_infinite : infinite nat := by
