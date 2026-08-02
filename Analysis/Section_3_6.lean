@@ -1299,19 +1299,439 @@ theorem SetTheory.Set.card_subset {X Y:Set} (hX: X.finite) (hY: Y ⊆ X) :
 
 /-- Proposition 3.6.14 (c) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_ssubset {X Y:Set} (hX: X.finite) (hY: Y ⊂ X) :
-    Y.card < X.card := by sorry
+    Y.card < X.card := by
+      have ⟨h1,h2⟩ := (card_subset hX hY.1)
+      have ⟨a, ha⟩ := hX
+      have ⟨b, hb⟩ := h1
+      apply has_card_to_card at ha
+      apply has_card_to_card at hb
+      have h5 := remove_finite Y ha hX
+      have ⟨c, hc⟩ := h5
+      apply has_card_to_card at hc
+      have h3 : X = Y ∪ (X \ Y) := by
+        ext x
+        simp
+        constructor <;> intro h
+        . tauto
+        . rcases h with h | h
+          . exact hY.1 x h
+          . tauto
+      have h4 : Disjoint Y (X \ Y) := by
+        rw [disjoint_iff]
+        ext x
+        simp
+        intro h1 h2
+        tauto
+      have h6 := card_add_union h1 h4 h5 hc
+      rw [← h3] at h6
+      by_cases h7 : X.card = Y.card
+      . have h8 : c = 0 := by omega
+        rw [← hc] at h8
+        have h9 := empty_iff_card_eq_zero.mpr (And.intro h5 h8)
+        have h10 : X = Y := by
+          ext x
+          constructor <;> intro h
+          . by_contra ha1
+            have ha2 : x ∈ X \ Y := by
+              simp
+              tauto
+            rw [h9] at ha2
+            have ha3 := not_mem_empty x
+            contradiction
+          . exact hY.1 x h
+        have h11 := hY.2.symm
+        contradiction
+      . push_neg at h7
+        omega
+
 
 /-- Proposition 3.6.14 (d) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_image {X Y:Set} (hX: X.finite) (f: X → Y) :
-    (image f X).finite ∧ (image f X).card ≤ X.card := by sorry
+    (image f X).finite ∧ (image f X).card ≤ X.card := by
+      obtain ⟨n, nh⟩ := hX
+      revert X Y
+      induction' n with m hm
+      . intro X Y f h1
+        have h2 := has_card_zero.mp h1
+        have h3 : (image f X) = ∅ := by
+          ext x
+          unfold image
+          constructor <;> intro h
+          . rw [replacement_axiom] at h
+            obtain ⟨a, ⟨ha1, ha2⟩⟩ := h
+            simp [h2] at ha2
+          . have ha3 := not_mem_empty x
+            contradiction
+        rw [h3]
+        simp
+      . intro X Y f ha1
+        have h5 := pos_card_nonempty (by aesop) ha1
+        obtain ⟨y, hy⟩ := nonempty_def h5
+        have h6 := card_erase (by aesop) ha1 ⟨y, hy⟩
+        change  (X \ {y}).has_card (m) at h6
+        set Z := (X \ {y})
+        have h7 : Z ⊆ X := by
+          intro x
+          unfold Z
+          simp
+          intro ha1 ha2
+          tauto
+        set g : Z → Y := fun x ↦ f ⟨x.val, h7 x x.property⟩
+        have hneg0 :  X \ Z = {y} := by
+          ext x
+          unfold Z
+          simp
+          constructor <;> intro h
+          . exact h.2 h.1
+          . rw [h]
+            simp
+            exact hy
+        have h8 := hm g h6
+        set A :=  (image g Z)
+        set C :=  (image f X)
+        set B : Set := {(f ⟨y, hy⟩).val}
+        have h9 : A ∪ B = C := by
+          ext x
+          unfold A B C
+          simp only [mem_union]
+          constructor <;> intro h
+          . rcases h with h | h
+            . unfold image at *
+              rw [replacement_axiom] at *
+              obtain ⟨a, ha⟩ := h
+              use ⟨a, h7 a a.property⟩
+              unfold g at ha
+              simp
+              constructor
+              . exact ha.1
+              . exact h7 a a.property
+            . unfold image at *
+              rw [replacement_axiom] at *
+              use ⟨y, hy⟩
+              simp
+              constructor
+              . simp at h
+                symm
+                exact h
+              . exact hy
+          . unfold image at *
+            rw [replacement_axiom] at *
+            obtain ⟨a, ha⟩ := h
+            by_cases hb : a.val ∈ Z
+            . apply Or.inl
+              use ⟨a, hb⟩
+              unfold g
+              simp
+              constructor
+              . exact ha.1
+              . exact hb
+            . apply Or.inr
+              simp
+              have ha1 : ↑a ∈ X \ Z := by
+                simp
+                tauto
+              rw [hneg0] at ha1
+              simp at ha1
+              have ha2 : (⟨↑a, ha.2⟩ : X) = (⟨y, hy⟩ : X) := by
+                rw [← Subtype.val_inj]
+                exact ha1
+              rw [← ha2]
+              simp
+              exact ha.1.symm
+        set z := (f ⟨y, hy⟩).val
+        have h10 := Example_3_6_7a z
+        change B.has_card 1 at h10
+        have h11 : B.finite := by
+          use 1
+        by_cases h12 : z ∈ A
+        . have h13 : A ∪ B = A := by
+            ext x
+            simp
+            intro h
+            unfold B at h
+            simp at h
+            unfold z at h12
+            rw [← h] at h12
+            exact h12
+          rw [h9] at h13
+          rw [h13]
+          constructor
+          . exact h8.1
+          . apply has_card_to_card at ha1
+            apply has_card_to_card at h6
+            rw [ha1]
+            rw [h6] at h8
+            omega
+        . have h13 : Disjoint A B := by
+            rw [disjoint_iff]
+            ext x
+            simp
+            intro h
+            by_contra h14
+            unfold B at h14
+            simp at h14
+            rw [h14] at h
+            contradiction
+          have h14 := card_union_disjoint h8.1 h11 h13
+          have h15 := card_union h8.1 h11
+          rw [h9] at h14
+          rw [h9] at h15
+          rw [h14]
+          constructor
+          . exact h15.1
+          . apply has_card_to_card at h10
+            apply has_card_to_card at ha1
+            apply has_card_to_card at h6
+            rw [h10]
+            rw [ha1]
+            omega
+
+
 
 /-- Proposition 3.6.14 (d) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_image_inj {X Y:Set} (hX: X.finite) {f: X → Y}
-  (hf: Function.Injective f) : (image f X).card = X.card := by sorry
+  (hf: Function.Injective f) : (image f X).card = X.card := by
+      symm
+      apply EquivCard_to_card_eq
+      set g : X → (image f X) := fun x ↦ ⟨(f x).val, by aesop⟩
+      use g
+      constructor
+      . intro a1 a2 ha12
+        unfold g at ha12
+        simp at ha12
+        rw [Subtype.val_inj] at ha12
+        exact hf ha12
+      . intro y
+        have hy := y.property
+        simp at hy
+        obtain ⟨a, ⟨ha, ha1⟩⟩ := hy
+        use ⟨a, ha⟩
+        unfold g
+        simp_all
+
+theorem SetTheory.Set.card_prod_fundation {X Y:Set} {w : Object}  (hX: X = {w}) (hY: Y.finite) : (X ×ˢ Y).finite ∧  (X ×ˢ Y).card = Y.card := by
+  obtain ⟨n, nh⟩ := hY
+  revert X Y
+  induction' n with m hm
+  . intro X Y h1 h2
+    have h3 := has_card_zero.mp h2
+    rw [h3]
+    have h4 : (X ×ˢ (∅:Set)) = ∅ := by
+          ext x
+          constructor <;> intro h
+          . rw [mem_cartesian] at h
+            obtain ⟨a, ⟨b, hb⟩⟩ := h
+            have h1 := b.property
+            have h2 := not_mem_empty b
+            contradiction
+          . have h2 := not_mem_empty x
+            contradiction
+    rw [h4]
+    simp
+  . intro X Y h1 h2
+    have h5 := pos_card_nonempty (by aesop) h2
+    obtain ⟨y, hy⟩ := nonempty_def h5
+    have h6 := card_erase (by aesop) h2 ⟨y, hy⟩
+    change  (Y \ {y}).has_card (m) at h6
+    have h7 := hm h1 h6
+    set A := (Y \ {y})
+    set B : Set := {y}
+    have h8 : A ∪ B = Y := by
+      unfold A B
+      ext x
+      simp
+      constructor <;> intro h
+      . rcases h with h | h
+        . tauto
+        . rw [h]
+          tauto
+      . tauto
+    have h9 : Disjoint A B := by
+      rw [disjoint_iff]
+      ext x
+      simp
+      unfold A B
+      simp
+    have h10 := prod_union X A B
+    rw [h8] at h10
+    have h11 : Disjoint (X ×ˢ A) (X ×ˢ B) := by
+      rw [disjoint_iff]
+      ext x
+      constructor <;> intro h
+      . rw [mem_inter] at h
+        obtain ⟨h1, h2⟩ := h
+        rw [mem_cartesian] at h1 h2
+        obtain ⟨a, ⟨b, hab⟩⟩ := h1
+        obtain ⟨c, ⟨d, hcd⟩⟩ := h2
+        rw [hcd] at hab
+        simp at hab
+        obtain ⟨hab1, hab2⟩ := hab
+        have hab3 := d.property
+        rw [hab2] at hab3
+        have hab4 : b.val ∈ A ∩ B := by
+          simp
+          have := b.property
+          tauto
+        rw [disjoint_iff] at h9
+        rw [h9] at hab4
+        have := not_mem_empty b
+        contradiction
+      . have := not_mem_empty x
+        contradiction
+    have hneg0 : w ∈ X := by
+      rw [h1]
+      simp
+    have hneg1 : y ∈ B := by
+      unfold B
+      simp
+    have h12 :  (X ×ˢ B).has_card 1 := by
+      set C := (X ×ˢ B)
+      set d := mk_cartesian ⟨w, hneg0⟩ ⟨y, hneg1⟩
+      have h13 : C = ({d.val}:Set) := by
+        unfold C
+        ext x
+        simp
+        constructor <;> intro h
+        . obtain ⟨a, ⟨ha, ⟨b, ⟨hb, hab⟩⟩⟩⟩ := h
+          rw [h1] at ha
+          unfold B at hb
+          simp at ha hb
+          rw [ha, hb] at hab
+          rw [hab]
+          aesop
+        . use w
+          constructor
+          . exact hneg0
+          . use y
+            constructor
+            . exact hneg1
+            . rw [h]
+              aesop
+      have h14 := Example_3_6_7a d
+      rw [← h13] at h14
+      exact h14
+    have h13 : (X ×ˢ B).finite := by
+      unfold finite
+      use 1
+    have ⟨h14, h15⟩ := hm h1 h6
+    have h16 := card_union_disjoint h14 h13 h11
+    apply has_card_to_card at h12
+    apply has_card_to_card at h2
+    apply has_card_to_card at h6
+    rw [h2]
+    rw [h12] at h16
+    rw [h15] at h16
+    rw [h6] at h16
+    rw [← h10] at h16
+    symm
+    constructor
+    . exact h16
+    . use (m+1)
+      apply card_to_has_card
+      . omega
+      . exact h16
+
+
+
+
 
 /-- Proposition 3.6.14 (e) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_prod {X Y:Set} (hX: X.finite) (hY: Y.finite) :
-    (X ×ˢ Y).finite ∧ (X ×ˢ Y).card = X.card * Y.card := by sorry
+    (X ×ˢ Y).finite ∧ (X ×ˢ Y).card = X.card * Y.card := by
+      obtain ⟨n, nh⟩ := hX
+      revert X Y
+      induction' n with m hm
+      . intro X Y h1 h2
+        have h3 := has_card_zero.mp h2
+        rw [h3]
+        simp
+        have h4 : ((∅:Set) ×ˢ Y) = ∅ := by
+          ext x
+          constructor <;> intro h
+          . rw [mem_cartesian] at h
+            obtain ⟨a, ha⟩ := h
+            have h1 := a.property
+            have h2 := not_mem_empty a
+            contradiction
+          . have h2 := not_mem_empty x
+            contradiction
+        rw [h4]
+        simp
+      . intro X Y h1 h2
+        have h5 := pos_card_nonempty (by aesop) h2
+        obtain ⟨y, hy⟩ := nonempty_def h5
+        have h6 := card_erase (by aesop) h2 ⟨y, hy⟩
+        change  (X \ {y}).has_card (m) at h6
+        set A := (X \ {y})
+        set B := ({y}:Set)
+        have h7 := hm h1 h6
+        have h8 : A ∪ B = X := by
+          unfold A
+          unfold B
+          ext x
+          simp
+          constructor <;> intro h
+          . rcases h with h | h
+            . tauto
+            . rw [h]
+              tauto
+          . tauto
+        have hneg0 : Disjoint A B := by
+          unfold A
+          unfold B
+          rw [disjoint_iff]
+          ext x
+          simp
+        have h9 := union_prod A B Y
+        rw [h8] at h9
+        have h10 : Disjoint (A ×ˢ Y) (B ×ˢ Y) := by
+          rw [disjoint_iff]
+          ext x
+          constructor <;> intro h
+          . rw [mem_inter] at h
+            obtain ⟨h1, h2⟩ := h
+            rw [mem_cartesian] at *
+            obtain ⟨a, ⟨b, hab⟩⟩ := h1
+            obtain ⟨c, ⟨d, hcd⟩⟩ := h2
+            rw [hab] at hcd
+            simp at hcd
+            obtain ⟨h3, h4⟩ := hcd
+            have ha := a.property
+            rw [disjoint_iff] at hneg0
+            rw [h3] at ha
+            have hc := c.property
+            have hac : c.val ∈ A ∩ B := by
+              simp
+              tauto
+            rw [hneg0] at hac
+            have h11 := not_mem_empty c
+            contradiction
+          . have h10 := not_mem_empty x
+            contradiction
+        have h11 := Example_3_6_7a y
+        change B.has_card 1 at h11
+        apply has_card_to_card at h2
+        apply has_card_to_card at h6
+        rw [h6] at h7
+        have h13 : B = {y} := by
+          rfl
+        have h14 := card_prod_fundation h13 h1
+        have h15 := card_union_disjoint h7.1 h14.1 h10
+        rw [← h9] at h15
+        rw [h7.2] at h15
+        rw [h14.2] at h15
+        have h16 := card_union h7.1 h14.1
+        rw [← h9] at h16
+        constructor
+        . exact h16.1
+        . rw [h2]
+          rw [h15]
+          have h17 : 1 * Y.card = Y.card := by
+            omega
+          nth_rewrite 2 [← h17]
+          ring
+
+
 
 noncomputable def SetTheory.Set.pow_fun_equiv {A B : Set} : ↑(A ^ B) ≃ (B → A) where
   toFun := sorry
