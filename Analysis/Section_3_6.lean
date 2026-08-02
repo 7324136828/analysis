@@ -694,25 +694,46 @@ theorem SetTheory.Set.bounded_on_finite {n:ℕ} (f: Fin n → nat) : ∃ M, ∀ 
 /-- Theorem 3.6.12 -/
 theorem SetTheory.Set.nat_infinite : infinite nat := by
   -- This proof is written to follow the structure of the original text.
-  by_contra this; choose n hn using this
-  simp [has_card] at hn; symm at hn; simp [HasEquiv.Equiv] at hn
-  choose f hf using hn; choose M hM using bounded_on_finite f
-  replace hf := hf.surjective ↑(M+1); contrapose! hf
-  peel hM with hi; contrapose! hi
-  apply_fun nat_equiv.symm at hi; simp_all
+  by_contra this;
+  choose n hn using this
+  simp [has_card] at hn;
+  symm at hn;
+  simp [HasEquiv.Equiv] at hn
+  choose f hf using hn;
+  choose M hM using bounded_on_finite f
+  replace hf := hf.surjective ↑(M+1);
+  contrapose! hf
+  peel hM with a hi;
+  contrapose! hi
+  apply_fun nat_equiv.symm at hi;
+  simp_all
 
 open Classical in
 /-- It is convenient for Lean purposes to give infinite sets the "junk" cardinality of zero. -/
 noncomputable def SetTheory.Set.card (X:Set) : ℕ := if h:X.finite then h.choose else 0
 
 theorem SetTheory.Set.has_card_card {X:Set} (hX: X.finite) : X.has_card (SetTheory.Set.card X) := by
-  simp [card, hX, hX.choose_spec]
+  simp [card]
+  simp [hX]
+  simp [hX.choose_spec]
 
 theorem SetTheory.Set.has_card_to_card {X:Set} {n: ℕ}: X.has_card n → X.card = n := by
-  intro h; simp [card, card_uniq (⟨ n, h ⟩:X.finite).choose_spec h]; aesop
+  intro h;
+  simp [card, card_uniq (⟨ n, h ⟩:X.finite).choose_spec h];
+  aesop
 
 theorem SetTheory.Set.card_to_has_card {X:Set} {n: ℕ} (hn: n ≠ 0): X.card = n → X.has_card n
-  := by grind [card, has_card_card]
+  := by
+    intro h
+    unfold card at h
+    by_cases h1 : X.finite
+    . simp [h1] at h
+      have h2 := h1.choose_spec
+      rw [← h]
+      exact h2
+    . simp [h1] at h
+      symm at h
+      contradiction
 
 theorem SetTheory.Set.card_fin_eq (n:ℕ): (Fin n).has_card n := (has_card_iff _ _).mp ⟨ id, Function.bijective_id ⟩
 
@@ -721,23 +742,81 @@ theorem SetTheory.Set.Fin_card (n:ℕ): (Fin n).card = n := has_card_to_card (ca
 theorem SetTheory.Set.Fin_finite (n:ℕ): (Fin n).finite := ⟨n, card_fin_eq n⟩
 
 theorem SetTheory.Set.EquivCard_to_has_card_eq {X Y:Set} {n: ℕ} (h: X ≈ Y): X.has_card n ↔ Y.has_card n := by
-  choose f hf using h; let e := Equiv.ofBijective f hf
-  constructor <;> (intro h'; rw [has_card_iff] at *; choose g hg using h')
-  . use e.symm.trans (.ofBijective _ hg); apply Equiv.bijective
-  . use e.trans (.ofBijective _ hg); apply Equiv.bijective
+  choose f hf using h;
+  let e := Equiv.ofBijective f hf
+  rw [has_card_iff];
+  constructor <;> (intro h'; choose g hg using h')
+  . set x := e.symm.trans (.ofBijective g hg)
+    use x;
+    apply Equiv.bijective
+  . set x := e.trans (.ofBijective g hg)
+    use x;
+    apply Equiv.bijective
 
 theorem SetTheory.Set.EquivCard_to_card_eq {X Y:Set} (h: X ≈ Y): X.card = Y.card := by
-  by_cases hX: X.finite <;> by_cases hY: Y.finite <;> try rw [finite] at hX hY
-  . choose nX hXn using hX; choose nY hYn using hY
-    simp [has_card_to_card hXn, has_card_to_card hYn, EquivCard_to_has_card_eq h] at *
-    solve_by_elim [card_uniq]
-  . choose nX hXn using hX; rw [EquivCard_to_has_card_eq h] at hXn; tauto
-  . choose nY hYn using hY; rw [←EquivCard_to_has_card_eq h] at hYn; tauto
-  simp [card, hX, hY]
+  by_cases hX: X.finite <;>
+  by_cases hY: Y.finite <;>
+  try rw [finite] at hX hY
+  . choose nX hXn using hX;
+    choose nY hYn using hY;
+    simp [has_card_to_card hXn] at *
+    simp [has_card_to_card hYn] at *
+    simp [EquivCard_to_has_card_eq h] at *
+    exact card_uniq hXn hYn
+  . choose nX hXn using hX;
+    rw [EquivCard_to_has_card_eq h] at hXn;
+    push_neg at hY
+    have h1 := hY nX
+    contradiction
+  . choose nY hYn using hY;
+    rw [←EquivCard_to_has_card_eq h] at hYn;
+    push_neg at hX
+    have h1 := hX nY
+    contradiction
+  simp [card]
+  conv =>
+    lhs
+    simp [hX]
+  conv =>
+    rhs
+    simp [hY]
+
+
+
 
 /-- Exercise 3.6.2 -/
 theorem SetTheory.Set.empty_iff_card_eq_zero {X:Set} : X = ∅ ↔ X.finite ∧ X.card = 0 := by
-  sorry
+  have emptySet {X:Set}: X = ∅ → X.finite := by
+    intro h
+    unfold finite
+    use 0
+    exact has_card_zero.mpr h
+  constructor <;> intro h
+  . constructor
+    exact emptySet h
+    . unfold card
+      have h1 := emptySet h
+      simp [h1]
+      exact card_uniq (h1.choose_spec) (has_card_zero.mpr h)
+  . contrapose h
+    push_neg at *
+    intro h1
+    have h2 := h1
+    have h3 := h1.choose_spec
+    unfold finite at h2
+    obtain ⟨n, nh⟩ := h2
+    unfold card
+    simp [h1]
+    push_neg
+    have h4 := card_uniq nh h3
+    rw [← h4]
+    by_cases h5 : n ≠ 0
+    . exact h5
+    . push_neg at h5
+      rw [h5] at nh
+      simp [has_card_zero] at nh
+      contradiction
+
 
 lemma SetTheory.Set.empty_of_card_eq_zero {X:Set} (hX : X.finite) : X.card = 0 → X = ∅ := by
   intro h
@@ -760,21 +839,463 @@ lemma SetTheory.Set.empty_finite : (∅: Set).finite := finite_of_empty rfl
 @[simp]
 lemma SetTheory.Set.empty_card_eq_zero : (∅: Set).card = 0 := card_eq_zero_of_empty rfl
 
+theorem SetTheory.Set.Fin_mv {n:ℕ}(y : (Fin n).toSubtype) : y.val ∈ Fin (n+1) := by
+  have h1 := y.property
+  rw [mem_Fin] at *
+  obtain ⟨m, mh⟩ := h1
+  use m
+  constructor
+  . omega
+  . exact mh.2
+
+theorem SetTheory.Set.Fin_narrow {n:ℕ}(y : (Fin (n+1)).toSubtype) (h : y ≠ n) : y.val ∈ Fin (n) := by
+  have h1 := y.property
+  rw [mem_Fin] at *
+  obtain ⟨m, ⟨mh1, mh2⟩⟩ := h1
+  use m
+  simp at mh2
+  rw [mh2] at h
+  constructor
+  . omega
+  . simp
+    exact mh2
+
+
+theorem SetTheory.Set.card_add {n:ℕ} {X:Set} {x:Object} (hX: X.has_card n) (hY :x ∉ X) :
+    (X ∪ {x}).has_card (n+1) := by
+      classical
+      rw [has_card_iff] at hX;
+      choose f hf using hX
+      set X' : Set := X ∪ {x}
+      set g : X' → Fin (n + 1) := fun x ↦ by
+        if h1 : x.val ∈ X then
+          set y := f ⟨x.val, h1⟩
+          exact ⟨y, Fin_mv y⟩
+        else
+          exact Fin_mk (n+1) n (by aesop)
+      have hf_less_than_n (x:X) : (f x) < n := by
+        set y := f x
+        have h1 := y.property
+        rw [mem_Fin] at h1
+        obtain ⟨a, ⟨ha1, ha2⟩⟩ := h1
+        simp at ha2
+        rw [ha2]
+        exact ha1
+      have h_belong_to {a : Object} (h1 : a ∈ X') (h2 : a ∉ X) : a = x := by
+        unfold X' at h1
+        simp at h1
+        rcases h1 with h1 | h1
+        . contradiction
+        . exact h1
+      have h_add_x : x ∈ X'  := by
+        unfold X'
+        simp
+      have h_add_xX (a : X) : a.val ∈ X' := by
+        unfold X'
+        simp
+        apply Or.inl a.property
+      have hg : Function.Bijective g := by
+        constructor
+        . intro a1 a2 ha12
+          unfold g at ha12
+          split_ifs at ha12 with h1 h2 h3
+          . simp at ha12
+            rw [Subtype.val_inj] at ha12
+            have h1 := hf.1 ha12
+            simp at h1
+            rw [Subtype.val_inj] at h1
+            exact h1
+          . simp [] at ha12
+            change ↑(f ⟨↑a1, h1⟩) = n at ha12
+            have h2 := hf_less_than_n (⟨↑a1, h1⟩)
+            omega
+          . symm at ha12
+            simp [] at ha12
+            change ↑(f ⟨↑a2, h3⟩) = n at ha12
+            have h2 := hf_less_than_n (⟨↑a2, h3⟩)
+            omega
+          . have h4 := h_belong_to a1.property h1
+            have h5 := h_belong_to a2.property h3
+            rw [← h5] at h4
+            rw [Subtype.val_inj] at h4
+            exact h4
+        . intro z
+          by_cases h : z = n
+          . use ⟨x, h_add_x⟩
+            unfold g
+            simp
+            simp [hY]
+            symm
+            exact h
+          . push_neg at h
+            have h1 := Fin_narrow z h
+            obtain ⟨x, hx⟩ := hf.2 ⟨z, h1⟩
+            use ⟨x, h_add_xX x⟩
+            unfold g
+            simp
+            simp [x.property]
+            simp at hx
+            exact hx
+      use g
+
 /-- Proposition 3.6.14 (a) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_insert {X:Set} (hX: X.finite) {x:Object} (hx: x ∉ X) :
-    (X ∪ {x}).finite ∧ (X ∪ {x}).card = X.card + 1 := by sorry
+    (X ∪ {x}).finite ∧ (X ∪ {x}).card = X.card + 1 := by
+      have hi := hX
+      unfold finite at hX
+      obtain ⟨m, mh⟩ := hX
+      have h1 := card_add mh hx
+      have h2 := h1
+      apply has_card_to_card at mh
+      apply has_card_to_card at h1
+      rw [← mh] at h1
+      symm
+      constructor
+      . exact h1
+      . unfold finite
+        use (m+1)
+
+
+
+theorem SetTheory.Set.card_add_union {X Y:Set} {n:ℕ} (hX: X.finite) (hdisj: Disjoint X Y)  (hA : Y.finite)(hY : Y.card = n) : (X ∪ Y).card = (X.card + n) := by
+  by_cases hX_not_zero :  X.card = 0
+  . have h2 := empty_iff_card_eq_zero.mpr (And.intro hX hX_not_zero)
+    rw [hX_not_zero]
+    rw [h2]
+    simp
+    exact hY
+  revert Y
+  induction' n with n hn
+  . intro Y h1 h2 h3
+    simp
+    have h4 := empty_iff_card_eq_zero.mpr (And.intro h2 h3)
+    rw [h4]
+    simp
+  . intro Y h1 h2 h3
+    have h4 := card_to_has_card (by omega) h3
+    have h5 := pos_card_nonempty (by aesop) h4
+    obtain ⟨y, hy⟩ := nonempty_def h5
+    rw [disjoint_iff] at *
+    replace h5 :  Disjoint X (Y\({y}:Set)) := by
+      rw [disjoint_iff] at *
+      ext x
+      simp
+      intro h5 h6
+      have h7 : x ∈ X ∩ Y := by
+        simp
+        exact And.intro h5 h6
+      rw [h1] at h7
+      have h8 := not_mem_empty x
+      contradiction
+    have h6 := card_erase (by aesop) h4 ⟨y, hy⟩
+    change ((Y\({y}:Set))).has_card (n + 1 - 1) at h6
+    simp at h6
+    set Z := (Y\({y}:Set))
+    have h7 : Z.finite := by
+      unfold finite
+      use n
+    have h8 : Z.card = n := by
+      unfold card
+      simp [h7]
+      have h9 := h7.choose_spec
+      have h10:= card_uniq h9 h6
+      exact h10
+    have h9 := hn h5 h7 h8
+    unfold Z at h6
+    set A := X ∪ Z
+    have h10 : y ∉ A ∧ (A ∪ ({y}:Set)) = X ∪ Y := by
+      constructor
+      . unfold A
+        unfold Z
+        simp
+        by_contra h11
+        have h12 : y ∈ X ∩ Y := by
+          simp
+          exact And.intro h11 hy
+        rw [h1] at h12
+        have h13 := not_mem_empty y
+        contradiction
+      . ext x
+        unfold A
+        unfold Z
+        simp
+        constructor <;> intro ch
+        . rcases ch with ch | ch
+          . rcases ch with ch | ch
+            . tauto
+            . tauto
+          rw [ch]
+          tauto
+        . rcases ch with ch | ch
+          . simp [ch]
+          . simp [ch]
+            by_cases hh : x = y
+            . tauto
+            . tauto
+    have h11 : A.finite := by
+      use (X.card + n)
+      apply card_to_has_card
+      . omega
+      exact h9
+    have h12 := (card_insert h11 h10.1).2
+    rw [h10.2] at h12
+    rw [h9] at h12
+    exact h12
+
+theorem SetTheory.Set.remove_finite  {Y:Set} {n:ℕ} (X:Set) (h1 : Y.card = n) (h2 : Y.finite) : (Y \ X).finite := by
+  revert Y
+  induction' n with n hn
+  . intro Y h1 h2
+    have h3 := empty_iff_card_eq_zero.mpr (And.intro h2 h1)
+    rw [h3]
+    have h4 : ∅ \ X =  ∅ := by
+      ext x
+      simp
+    rw [h4]
+    simp
+  . intro Y h1 h2
+    have h4 := card_to_has_card (by omega) h1
+    have h5 := pos_card_nonempty (by aesop) h4
+    obtain ⟨y, hy⟩ := nonempty_def h5
+    have h6 := card_erase (by aesop) h4 ⟨y, hy⟩
+    change (Y \ {y}).has_card (n) at h6
+    set Z := (Y \ {y})
+    have h7 : Z.finite := by
+      unfold finite
+      use n
+    have h8 : Z.card = n := by
+      unfold card
+      simp [h7]
+      have h9 := h7.choose_spec
+      exact card_uniq h9 h6
+    have h9 := hn h8 h7
+    have ⟨m, hm⟩ := h9
+    by_cases h11 : y ∈ X
+    . have h12 : Z \ X = Y \ X := by
+        ext x
+        unfold Z
+        simp
+        intro h13 h14
+        by_contra h15
+        rw [← h15] at h11
+        contradiction
+      use m
+      rw [← h12]
+      exact hm
+    . use (m+1)
+      have h12 : y ∉ Z \ X := by
+        unfold Z
+        simp
+      have h13 := (card_insert h9 h12).2
+      have h14 : (Z \ X).card = m := by
+        unfold card
+        simp [h9]
+        have h15 := h9.choose_spec
+        exact card_uniq h15 hm
+      rw [h14] at h13
+      have h15 : (Z \ X ∪ {y}) = Y \ X := by
+        ext x
+        unfold Z
+        simp
+        constructor <;> intro h
+        . rcases h with h | h
+          . exact And.intro h.1.1 h.2
+          . rw [h]
+            tauto
+        . obtain ⟨h1, h2⟩ := h
+          by_cases h3 : x = y
+          . tauto
+          . tauto
+      rw [h15] at h13
+      apply card_to_has_card
+      . omega
+      . exact h13
+
+theorem SetTheory.Set.remove_finite_v2  {Y:Set} {n} (X:Set) (h1 : Y.card = n) (h2 : Y.finite) : (Y \ X).card ≤ n := by
+  revert Y
+  induction' n with n hn
+  . intro Y h1 h2
+    have h3 := empty_iff_card_eq_zero.mpr (And.intro h2 h1)
+    simp [h3]
+    have h4 : ∅ \ X =  ∅ := by
+      ext x
+      simp
+    simp [h4]
+  . intro Y h1 h2
+    have h4 := card_to_has_card (by omega) h1
+    have h5 := pos_card_nonempty (by aesop) h4
+    obtain ⟨y, hy⟩ := nonempty_def h5
+    have h6 := card_erase (by aesop) h4 ⟨y, hy⟩
+    change (Y \ {y}).has_card (n) at h6
+    apply has_card_to_card at h6
+    have h7 := Example_3_6_7a y
+    apply has_card_to_card at h7
+    have h8 := remove_finite ({y}:Set) h1 h2
+    have h9 := hn h6 h8
+    by_cases h11 : y ∈ X
+    . have h12 : ((Y \ {y}) \ X) = Y \ X := by
+        ext x
+        simp
+        intro h1 h2
+        by_contra h3
+        rw [h3] at h1
+        contradiction
+      rw [h12] at h9
+      omega
+    . have h12 : y ∉ ((Y \ {y}) \ X) := by
+        simp
+      have ⟨e, he⟩ := h8
+      apply has_card_to_card at he
+      have h13 := remove_finite X he h8
+      have h14 := (card_insert h13 h12).2
+      have h15 : (((Y \ {y}) \ X) ∪ {y}) = Y \ X := by
+        ext x
+        simp
+        constructor <;> intro h
+        . rcases h with h | h
+          . tauto
+          . rw [h]
+            tauto
+        . tauto
+      rw [h15] at h14
+      omega
 
 /-- Proposition 3.6.14 (b) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_union {X Y:Set} (hX: X.finite) (hY: Y.finite) :
-    (X ∪ Y).finite ∧ (X ∪ Y).card ≤ X.card + Y.card := by sorry
+    (X ∪ Y).finite ∧ (X ∪ Y).card ≤ X.card + Y.card := by
+      have simplify_X_U_Y : X ∪ Y = X ∪ (Y \ X) := by
+        ext x
+        simp
+        constructor <;> intro h
+        . rcases h with h | h
+          . tauto
+          . tauto
+        . tauto
+      have disjoint_X_U_Y: Disjoint X (Y \ X) := by
+        rw [disjoint_iff]
+        ext x
+        simp
+        intro h1 h2
+        exact h1
+      by_cases hX_not_zero :  X.card = 0
+      . have h2 := empty_iff_card_eq_zero.mpr (And.intro hX hX_not_zero)
+        rw [hX_not_zero]
+        rw [h2]
+        simp
+        exact hY
+      . by_cases hY_not_zero : Y.card = 0
+        . have h2 := empty_iff_card_eq_zero.mpr (And.intro hY hY_not_zero)
+          rw [hY_not_zero]
+          rw [h2]
+          simp
+          exact hX
+        . have ⟨m, hm⟩ := hY
+          push_neg at hX_not_zero hY_not_zero
+          have h1 := has_card_to_card hm
+          have h2 := remove_finite X h1 hY
+          have ⟨a, ha⟩ := h2
+          replace ha := has_card_to_card ha
+          have h3 := card_add_union hX disjoint_X_U_Y h2 ha
+          rw [← simplify_X_U_Y] at h3
+          rw [h3]
+          constructor
+          . use (X.card + a)
+            apply card_to_has_card
+            . omega
+            . exact h3
+          . have h4 := remove_finite_v2 X h1 hY
+            omega
+
+
 
 /-- Proposition 3.6.14 (b) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_union_disjoint {X Y:Set} (hX: X.finite) (hY: Y.finite)
-  (hdisj: Disjoint X Y) : (X ∪ Y).card = X.card + Y.card := by sorry
+  (hdisj: Disjoint X Y) : (X ∪ Y).card = X.card + Y.card := by
+    by_cases hX_not_zero :  X.card = 0
+    . have h2 := empty_iff_card_eq_zero.mpr (And.intro hX hX_not_zero)
+      rw [hX_not_zero]
+      rw [h2]
+      simp
+    . by_cases hY_not_zero : Y.card = 0
+      . have h2 := empty_iff_card_eq_zero.mpr (And.intro hY hY_not_zero)
+        rw [hY_not_zero]
+        rw [h2]
+        simp
+      . have ⟨e, he⟩ := hY
+        apply has_card_to_card at he
+        have h3 := card_add_union hX hdisj hY he
+        rw [← he] at h3
+        exact h3
 
 /-- Proposition 3.6.14 (c) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_subset {X Y:Set} (hX: X.finite) (hY: Y ⊆ X) :
-    Y.finite ∧ Y.card ≤ X.card := by sorry
+    Y.finite ∧ Y.card ≤ X.card := by
+      obtain ⟨n, ha⟩ := hX
+      revert X Y
+      induction' n with m hm
+      . intro X Y h1 h2
+        have h3 := has_card_zero.mp h2
+        apply has_card_to_card at h2
+        rw [h2]
+        rw [h3] at h1
+        have h4 : Y = ∅ := by
+          ext x
+          constructor <;> intro h
+          . exact h1 x h
+          . have h4 := not_mem_empty x
+            contradiction
+        rw [h4]
+        simp
+      . intro X Y h1 h2
+        have h5 := pos_card_nonempty (by aesop) h2
+        obtain ⟨y, hy⟩ := nonempty_def h5
+        have h6 := card_erase (by aesop) h2 ⟨y, hy⟩
+        change  (X \ {y}).has_card (m) at h6
+        set B := X \ {y}
+        set A := Y \ {y}
+        have h7 : A ⊆ B := by
+          intro x
+          unfold A B
+          simp
+          intro ha1 ha2
+          tauto
+        have h8 := hm h7 h6
+        apply has_card_to_card at h6
+        apply has_card_to_card at h2
+        rw [h6] at h8
+        rw [h2]
+        unfold A at h8
+        obtain ⟨h9, h10⟩ := h8
+        have h11 : y ∉ A := by
+          unfold A
+          simp
+        have h12 := card_insert h9 h11
+        by_cases h13 : y ∈ Y
+        . have h14 :  (Y \ {y} ∪ {y}) = Y := by
+            ext x
+            simp
+            constructor <;> intro h
+            . rcases h with h | h
+              . tauto
+              . rw [h]
+                tauto
+            . tauto
+          rw [h14] at h12
+          constructor
+          . tauto
+          . omega
+        . have h14 :  (Y \ {y}) = Y := by
+            ext x
+            simp
+            intro ha
+            by_contra ha1
+            rw [← ha1] at h13
+            contradiction
+          rw [h14] at h9 h10
+          constructor
+          . tauto
+          . omega
+
 
 /-- Proposition 3.6.14 (c) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_ssubset {X Y:Set} (hX: X.finite) (hY: Y ⊂ X) :
@@ -1000,3 +1521,40 @@ theorem SetTheory.Set.card_eq_ncard {X:Set} : X.card = (X: _root_.Set Object).nc
   rfl
 
 end Chapter3
+
+-- theorem SetTheory.Set.card_add_union {X Y:Set} (hX: X.finite) (hdisj: Disjoint X Y) {n:ℕ} (hY : Y.has_card n) : (X ∪ Y).has_card (X.card + n) := by
+--   revert Y
+--   induction' n with n hn
+--   . intro Y h1 h2
+--     simp
+--     rw [has_card_zero] at h2
+--     rw [h2]
+--     simp
+--     by_cases h : X.card = 0
+--     . rw [h]
+--       have h3 := empty_iff_card_eq_zero.mpr (And.intro hX h)
+--       exact has_card_zero.mpr h3
+--     . apply card_to_has_card
+--       push_neg at h
+--       exact h
+--       . rfl
+--   . intro Y h1 h2
+--     have h3 := pos_card_nonempty (by aesop) h2
+--     obtain ⟨y, hy⟩ := nonempty_def h3
+--     have h4 :  Disjoint X (Y\({y}:Set)) := by
+--       rw [disjoint_iff] at *
+--       ext x
+--       simp
+--       intro h5 h6
+--       have h7 : x ∈ X ∩ Y := by
+--         simp
+--         exact And.intro h5 h6
+--       rw [h1] at h7
+--       have h8 := not_mem_empty x
+--       contradiction
+--     have h5 := card_erase (by aesop) h2 ⟨y, hy⟩
+--     change ((Y\({y}:Set))).has_card (n + 1 - 1) at h5
+--     set Z := (Y\({y}:Set))
+--     have h6 := hn h4 h5
+--     unfold Z at h6
+--     have h7 := card_add h6 ⟨y, by aesop⟩
