@@ -2417,68 +2417,542 @@ theorem SetTheory.Set.pow_pow_EqualCard_pow_prod (A B C:Set) :
         obtain ⟨a, ha⟩ := h5
         have h6 := curry_equiv.surjective a
         obtain ⟨b, hb⟩ := h6
+        let x : ((A ^ B) ^ C).toSubtype :=
+          h3.symm (fun c b' ↦ b b' c)
+        use x
+        unfold f
+        simp
+        unfold x
+        simp
+        simp at hb
+        rw [hb]
+        exact ha
 
 
+theorem SetTheory.Set.stable_fin_n (n:ℕ) : (Fin n).finite ∧ (Fin n).card = n := by
+  set A := (Fin n)
+  have h_a_finite : A.finite := by
+    unfold finite
+    use n
+  have h_a_has_n : A.has_card n := by
+    unfold has_card
+    unfold A
+    rfl
+  constructor
+  . exact h_a_finite
+  . unfold card
+    simp [h_a_finite]
+    generalize_proofs pf1
+    have hpf1 := pf1.choose_spec
+    exact card_uniq hpf1 h_a_has_n
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-theorem SetTheory.Set.pow_pow_eq_pow_mul (a b c:ℕ): (a^b)^c = a^(b*c) := by sorry
+theorem SetTheory.Set.pow_pow_eq_pow_mul (a b c:ℕ): (a^b)^c = a^(b*c) := by
+  have ha := stable_fin_n a
+  have hb := stable_fin_n b
+  have hc := stable_fin_n c
+  set A := Fin a
+  set B := Fin b
+  set C := Fin c
+  have hab := (card_pow ha.1 hb.1)
+  have habc := (card_pow hab.1 hc.1)
+  have hbc := card_prod hb.1 hc.1
+  have habxc := (card_pow ha.1 hbc.1)
+  have h1 := pow_pow_EqualCard_pow_prod A B C
+  have h2 := equal_card_means_equal_cardinality habc.1 h1
+  conv at h2 =>
+    lhs
+    rw [habc.2]
+    rw [hab.2]
+    rw [ha.2]
+    rw [hb.2]
+    rw [hc.2]
+  conv at h2 =>
+    rhs
+    rw [habxc.2]
+    rw [hbc.2]
+    rw [ha.2]
+    rw [hb.2]
+    rw [hc.2]
+  exact h2
 
 theorem SetTheory.Set.pow_prod_pow_EqualCard_pow_union (A B C:Set) (hd: Disjoint B C) :
-    EqualCard ((A ^ B) ×ˢ (A ^ C)) (A ^ (B ∪ C)) := by sorry
+    EqualCard ((A ^ B) ×ˢ (A ^ C)) (A ^ (B ∪ C)) := by
+      have h1 := card_pow_union_eq A hd
+      exact h1.symm
 
-theorem SetTheory.Set.pow_mul_pow_eq_pow_add (a b c:ℕ): (a^b) * a^c = a^(b+c) := by sorry
+theorem SetTheory.Set.one_size (x:Object) : ({x}:Set).finite ∧ ({x}:Set).card = 1 := by
+    have h1 : ({x}:Set).finite := by
+      unfold finite
+      use 1
+      exact Example_3_6_7a x
+    constructor
+    . exact h1
+    . unfold card
+      simp [h1]
+      generalize_proofs pf1
+      have hpf1 := pf1.choose_spec
+      have h2 := Example_3_6_7a x
+      exact card_uniq hpf1 h2
+
+
+theorem SetTheory.Set.pow_mul_pow_eq_pow_add (a b c:ℕ): (a^b) * a^c = a^(b+c) := by
+  have ha := stable_fin_n a
+  have hpb := stable_fin_n b
+  have hpc := stable_fin_n c
+  set A := Fin a
+  set pB := Fin b
+  set pC := Fin c
+  have h0 := one_size 0
+  have h1 := one_size 1
+  have hb := (card_prod h0.1 hpb.1)
+  have hc := (card_prod h1.1 hpc.1)
+  have hab := (card_pow ha.1 hb.1)
+  have hac := (card_pow ha.1 hc.1)
+  have habac := (card_prod hab.1 hac.1)
+  have hbc := (card_union hb.1 hc.1).1
+  have hbc_d := card_union_disjoint hb.1 hc.1
+  set B := ({0}:Set) ×ˢ pB
+  set C := ({1}:Set) ×ˢ pC
+  have h_disjoint : Disjoint B C := by
+    rw [disjoint_iff]
+    ext x
+    unfold B C
+    simp
+    intro a ha1 ha2 b hb1
+    rw [ha2]
+    intro hb2
+    simp at hb2
+  replace hbc := And.intro hbc (hbc_d h_disjoint)
+  have habc := (card_pow ha.1 hbc.1)
+  have h3 := (pow_prod_pow_EqualCard_pow_union A B C) h_disjoint
+  have h4 := equal_card_means_equal_cardinality habac.1 h3
+  conv at h4 =>
+    lhs
+    rw [habac.2, hab.2, hac.2, ha.2, hb.2, hc.2, h0.2, h1.2, hpb.2, hpc.2]
+    simp
+  conv at h4 =>
+    rhs
+    rw [habc.2, hbc.2, ha.2, hb.2, hc.2, h0.2, h1.2, hpb.2, hpc.2]
+    simp
+  exact h4
+
 
 /-- Exercise 3.6.7 -/
 theorem SetTheory.Set.injection_iff_card_le {A B:Set} (hA: A.finite) (hB: B.finite) :
-    (∃ f:A → B, Function.Injective f) ↔ A.card ≤ B.card := sorry
+    (∃ f:A → B, Function.Injective f) ↔ A.card ≤ B.card := by
+      constructor <;> intro h
+      . obtain ⟨f, hf⟩ := h
+        have h1 := card_image_inj hA hf
+        have h2 :  (image f A) ⊆ B := by
+          intro x hx
+          rw [replacement_axiom] at hx
+          obtain ⟨y, ⟨hy1, hy2⟩⟩ := hx
+          rw [← hy1]
+          grind
+        replace h2 := card_subset hB h2
+        rw [h1] at h2
+        exact h2.2
+      . have ⟨a, ha⟩ := hA
+        have ⟨b, hb⟩ := hB
+        have ha1 : A.card = a := by
+          unfold card
+          simp [hA]
+          generalize_proofs pf1
+          have hpf1 := pf1.choose_spec
+          exact card_uniq hpf1 ha
+        have ha2 : B.card = b := by
+          unfold card
+          simp [hB]
+          generalize_proofs pf1
+          have hpf1 := pf1.choose_spec
+          exact card_uniq hpf1 hb
+        obtain ⟨fa, hfa⟩ := ha
+        obtain ⟨fb, hfb⟩ := hb.symm
+        rw [ha1, ha2] at h
+        have hinj (x : Fin a) : x.val ∈ Fin b := by
+          have hx := x.property
+          rw [mem_Fin] at *
+          obtain ⟨m, hm⟩ := hx
+          use m
+          constructor
+          . omega
+          . tauto
+        set finj : (Fin a) → (Fin b ) := fun x ↦ ⟨x, hinj x⟩
+        set g : A.toSubtype → B.toSubtype := fun x ↦ (fb (finj (fa x)))
+        use g
+        intro a1 a2 ha12
+        unfold g at ha12
+        replace ha12 := hfb.1 ha12
+        unfold finj at ha12
+        simp at ha12
+        rw [Subtype.val_inj] at ha12
+        exact hfa.1 ha12
+
+
 
 /-- Exercise 3.6.8 -/
 theorem SetTheory.Set.surjection_from_injection {A B:Set} (hA: A ≠ ∅) (f: A → B)
-  (hf: Function.Injective f) : ∃ g:B → A, Function.Surjective g := by sorry
+  (hf: Function.Injective f) : ∃ g:B → A, Function.Surjective g := by
+      have ⟨x, hx⟩ := nonempty_def hA
+      set g : B → A := fun y ↦ by
+        if h1 : ∃z, f z = y then
+          exact h1.choose
+        else
+          exact ⟨x, hx⟩
+      use g
+      intro m
+      use f m
+      unfold g
+      have h1 : ∃z, f z = f m := by
+        use m
+      simp [h1]
+      generalize_proofs
+      have h2 := h1.choose_spec
+      exact hf h2
 
 /-- Exercise 3.6.9 -/
 theorem SetTheory.Set.card_union_add_card_inter {A B:Set} (hA: A.finite) (hB: B.finite) :
-    A.card + B.card = (A ∪ B).card + (A ∩ B).card := by  sorry
+    A.card + B.card = (A ∪ B).card + (A ∩ B).card := by
+      set C := (A ∩ B)
+      set D := A \ B
+      have h1 : A = C ∪ D := by
+        unfold C D
+        ext x
+        simp
+        constructor <;> intro h
+        . tauto
+        . rcases h with h | h
+          . tauto
+          . tauto
+      have hCD_disjoint : Disjoint C D := by
+        unfold C D
+        rw [disjoint_iff]
+        ext x
+        simp
+        intro h1 h2 h3
+        exact h2
+      have h3 : C ⊆ A := by
+        unfold C
+        intro x
+        simp
+        tauto
+      have h4 : D ⊆ A := by
+        unfold D
+        intro x
+        simp
+        tauto
+      have hC := card_subset hA h3
+      have hD := card_subset hA h4
+      have h7 := card_union_disjoint hC.1 hD.1 hCD_disjoint
+      rw [← h1] at h7
+      rw [h7]
+      rw [Nat.add_assoc, Nat.add_comm, Nat.add_right_cancel_iff]
+      have hDB : D ∪ B = A ∪ B := by
+        ext x
+        unfold D
+        simp
+        constructor <;> intro h
+        . rcases h with h | h
+          . tauto
+          . tauto
+        . rcases h with h | h
+          . tauto
+          . tauto
+      have hDB_disjoint : Disjoint D B := by
+        rw [disjoint_iff]
+        ext x
+        unfold D
+        simp
+      have h8 := card_union_disjoint hD.1 hB hDB_disjoint
+      rw [hDB] at h8
+      rw [h8]
+
 
 /-- Exercise 3.6.10 -/
 theorem SetTheory.Set.pigeonhole_principle {n:ℕ} {A: Fin n → Set}
-  (hA: ∀ i, (A i).finite) (hAcard: (iUnion _ A).card > n) : ∃ i, (A i).card ≥ 2 := by sorry
+  (hA: ∀ i, (A i).finite) (hAcard: (iUnion _ A).card > n) : ∃ i, (A i).card ≥ 2 := by
+    revert A
+    induction' n with m hm
+    . intro A hA hAcard
+      have h1 : (Fin 0) = ∅ := by
+        rw [eq_empty_iff_forall_notMem]
+        grind [specification_axiom'']
+      simp at hAcard
+      simp
+      have h2 : ∀x, x ∉ (Fin 0).iUnion A := by
+       intro x
+       by_contra h2
+       rw [mem_iUnion] at h2
+       obtain ⟨a, ha⟩ := h2
+       have hpa := a.property
+       simp [h1] at hpa
+      have h3 : (Fin 0).iUnion A = ∅ := by
+        aesop
+      rw [h3] at hAcard
+      simp at hAcard
+    . intro A hA hACard
+      set last := Fin_mk (m+1) m (by linarith)
+      by_cases h_less_than: (A last).card ≥ 2
+      . use last
+      . push_neg at h_less_than
+        have h1 : (A last).card ≤ 1 := by omega
+        set inj : Fin m → Fin (m+1) := fun x ↦ Fin_embed m (m+1) (by linarith) x
+        set B : (Fin m).toSubtype → Set := fun x ↦ A (inj x)
+        have hB :  (∀ (i : (Fin m).toSubtype), (B i).finite) := by
+          intro i
+          unfold B
+          exact hA (inj i)
+        have h2 :  (Fin (m + 1)).iUnion A = ((Fin m).iUnion B) ∪ (A last) := by
+          ext x
+          simp
+          rw [mem_iUnion] at *
+          constructor <;> intro h
+          . obtain ⟨w, hwp⟩ := h
+            have hw := w.property
+            rw [mem_Fin] at hw
+            obtain ⟨wz, hwz⟩ := hw
+            by_cases hw_case : wz < m
+            . apply Or.inl
+              rw [mem_iUnion]
+              have hw_1 : w.val ∈ Fin m := by
+                rw [mem_Fin]
+                use wz
+                tauto
+              use ⟨w, hw_1⟩
+            . push_neg at hw_case
+              have hw_eq : wz = m := by omega
+              apply Or.inr
+              have hlast_w : last = w := by
+                unfold last
+                unfold Fin_mk
+                simp
+                conv =>
+                  lhs
+                  rw [← hw_eq]
+                aesop
+              rw [hlast_w]
+              exact hwp
+          rcases h with h | h
+          . rw [mem_iUnion] at h
+            obtain ⟨a, ha⟩ := h
+            use (inj a)
+          . use last
+        set U :=  (Fin m).iUnion B
+        set V := A last
+        set W := ((Fin (m + 1)).iUnion A)
+        have hB_finite : W.card ≠ 0 := by omega
+        have h8_equal : W.card = W.card := by rfl
+        have h9 := card_to_has_card hB_finite h8_equal
+        have hW_finite : W.finite := by
+          unfold finite
+          use W.card
+        have hU_subset : U ⊆ W := by
+          intro x
+          rw [h2]
+          simp
+          tauto
+        have hV_subset : V ⊆ W := by
+          intro x
+          rw [h2]
+          simp
+          tauto
+        have hU_finite := card_subset hW_finite hU_subset
+        have hV_finite := card_subset hW_finite hV_subset
+        have hUV := card_union hU_finite.1 hV_finite.1
+        rw [← h2] at hUV
+        have hUV2 := hUV.2
+        have h3 : U.card + V.card > m + 1 := by omega
+        have h4 : U.card > m := by omega
+        have hm1 := hm hB h4
+        obtain ⟨z, hz⟩ := hm1
+        use (inj z)
+
 
 /-- Exercise 3.6.11 -/
 theorem SetTheory.Set.two_to_two_iff {X Y:Set} (f: X → Y): Function.Injective f ↔
-    ∀ S ⊆ X, S.card = 2 → (image f S).card = 2 := by sorry
+    ∀ S ⊆ X, S.card = 2 → (image f S).card = 2 := by
+      constructor <;> intro h
+      . intro S h1 h2
+        have h3 : S.finite := by
+          unfold finite
+          use 2
+          exact card_to_has_card (by linarith) h2
+        set g : S →  X := fun s ↦ ⟨s, h1 s s.property⟩
+        set fg := fun x ↦ f (g x)
+        have hfg : Function.Injective fg := by
+          intro a1 a2 ha12
+          unfold fg at ha12
+          replace ha12 := h ha12
+          unfold g at ha12
+          simp at ha12
+          rw [← Subtype.val_inj]
+          exact ha12
+        have h4 := card_image_inj h3 hfg
+        rw [h2] at h4
+        have h5 :  (image fg S) =  (image f S) := by
+          ext x
+          simp
+          constructor <;> intro h
+          . obtain ⟨a, ha1⟩ := h
+            use a
+            obtain ⟨ha11, ha12⟩ :=  ha1
+            constructor
+            . use h1 a ha11
+            . exact ha11
+          . obtain ⟨a, ha1⟩ := h
+            obtain ⟨ha11, ha12⟩ := ha1
+            use a
+            use ha12
+            obtain ⟨ha111, ha112⟩ := ha11
+            exact ha112
+        rw [← h5]
+        exact h4
+      . intro a1 a2 ha12
+        set S := ({a1.val, a2.val} : Set)
+        have ha1 := a1.property
+        have ha2 := a2.property
+        have h1 : S ⊆ X := by
+          intro x
+          unfold S
+          simp
+          intro h
+          rcases h with h | h
+          . rw [h]
+            exact ha1
+          . rw [h]
+            exact ha2
+        have h2 := h S h1
+        by_contra h3
+        push_neg at h3
+        have h4 : S.has_card 2 := by
+          unfold has_card
+          set g : S → Fin 2 := fun x ↦ by
+            if x = a1.val then
+              exact Fin_mk 2 0 (by linarith)
+            else
+              exact Fin_mk 2 1 (by linarith)
+          use g
+          constructor
+          . intro b1 b2 hb12
+            unfold g at hb12
+            split_ifs at hb12 with h_if_1 h_if_2 h_if_3
+            . rw [← h_if_2] at h_if_1
+              rw [← Subtype.val_inj]
+              exact h_if_1
+            . simp at hb12
+            . simp at hb12
+            . have hS1 := b1.property
+              have hS2 := b2.property
+              unfold S at hS1 hS2
+              simp at hS1 hS2
+              have hxb1 : b1 = a2.val := by tauto
+              have hxb2 : b2 = a2.val := by tauto
+              rw [← hxb2] at hxb1
+              rw [← Subtype.val_inj]
+              exact hxb1
+          . intro z
+            have hz := z.property
+            rw [mem_Fin] at hz
+            obtain ⟨m, hm⟩ := hz
+            have hmx : m = 0 ∨ m = 1 := by omega
+            rcases hmx with hmx | hmx
+            . use ⟨a1, by aesop⟩
+              unfold g
+              simp
+              aesop
+            . use ⟨a2, by aesop⟩
+              unfold g
+              simp
+              aesop
+        have h5 : S.finite := by
+          unfold finite
+          use 2
+        have h6 : S.card = 2 := by
+          unfold card
+          simp [h5]
+          generalize_proofs pf1
+          have hpf1 := pf1.choose_spec
+          exact card_uniq hpf1 h4
+        replace h2 := h2 h6
+        have h7 : (image f S) = ({(f a1).val}:Set) := by
+          ext x
+          simp
+          constructor <;> intro h
+          . obtain ⟨z, ⟨hz1, hz2⟩⟩ := h
+            obtain ⟨hz11, hz12⟩ := hz1
+            unfold S at hz2
+            simp at hz2
+            rcases hz2 with hz2 | hz2
+            . rw [← hz12]
+              simp_all
+            . rw [← hz12]
+              simp_all
+          . use a1
+            constructor
+            . use ha1
+              rw [h]
+            . unfold S
+              simp
+        have h8 : (image f S).card = 1 := by
+          have h9 := (one_size (f a1).val).2
+          rw [← h7] at h9
+          exact h9
+        rw [h2] at h8
+        contradiction
+
+
 
 /-- Exercise 3.6.12 -/
 def SetTheory.Set.Permutations (n: ℕ): Set := (Fin n ^ Fin n).specify (fun F ↦
     Function.Bijective (pow_fun_equiv F))
 
+
 /-- Exercise 3.6.12 (i), first part -/
-theorem SetTheory.Set.Permutations_finite (n: ℕ): (Permutations n).finite := by sorry
+theorem SetTheory.Set.Permutations_finite (n: ℕ): (Permutations n).finite := by
+  have h_subset : (Permutations n) ⊆ (Fin n ^ Fin n) := by
+    intro x hx
+    unfold Permutations at hx
+    rw [specification_axiom''] at hx
+    exact hx.1
+  have hn := stable_fin_n n
+  have hnn := card_pow hn.1 hn.1
+  exact (card_subset hnn.1 h_subset).1
+
 
 /- To continue Exercise 3.6.12 (i), we'll first develop some theory about `Permutations` and `Fin`. -/
 
 noncomputable def SetTheory.Set.Permutations_toFun {n: ℕ} (p: Permutations n) : (Fin n) → (Fin n) := by
   have := p.property
-  simp only [Permutations, specification_axiom'', powerset_axiom] at this
+  simp only [Permutations ] at this
+  simp only [specification_axiom''] at this
+  simp only [powerset_axiom] at this
   exact this.choose.choose
 
 theorem SetTheory.Set.Permutations_bijective {n: ℕ} (p: Permutations n) :
-    Function.Bijective (Permutations_toFun p) := by sorry
+    Function.Bijective (Permutations_toFun p) := by
+      have h1 := p.property
+      simp only [Permutations ] at h1
+      simp only [specification_axiom''] at h1
+      simp only [powerset_axiom] at h1
+      have h3 := h1.choose_spec
+      exact h3
 
 theorem SetTheory.Set.Permutations_inj {n: ℕ} (p1 p2: Permutations n) :
-    Permutations_toFun p1 = Permutations_toFun p2 ↔ p1 = p2 := by sorry
+    Permutations_toFun p1 = Permutations_toFun p2 ↔ p1 = p2 := by
+      have hp1 := p1.property
+      have hp2 := p2.property
+      simp only [Permutations ] at hp1 hp2
+      simp only [specification_axiom''] at hp1 hp2
+      simp only [powerset_axiom] at hp1 hp2
+      constructor <;> intro h
+      . have hp12 := hp1.choose.choose_spec
+        have hp22 := hp2.choose.choose_spec
+        rw [← Subtype.val_inj]
+        rw [← hp12, ← hp22]
+        simp
+        simp only [Permutations_toFun] at h
+        rw [h]
+      . rw [h]
 
 /-- This connects our concept of a permutation with Mathlib's {name}`Equiv` between {lean}`Fin n` and {lean}`Fin n`. -/
 noncomputable def SetTheory.Set.perm_equiv_equiv {n : ℕ} : Permutations n ≃ (Fin n ≃ Fin n) := {
