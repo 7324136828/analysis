@@ -1734,28 +1734,704 @@ theorem SetTheory.Set.card_prod {X Y:Set} (hX: X.finite) (hY: Y.finite) :
 
 
 noncomputable def SetTheory.Set.pow_fun_equiv {A B : Set} : ↑(A ^ B) ≃ (B → A) where
-  toFun := sorry
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  toFun := fun x ↦ by
+    have h1 := x.property
+    rw [powerset_axiom] at h1
+    exact h1.choose
+  invFun := fun f ↦ by
+    have h1 := (powerset_axiom f).mpr (by aesop)
+    exact ⟨f, h1⟩
+  left_inv := by
+    intro x
+    simp
+    generalize_proofs pf1 pf2
+    have h1 := pf1.choose_spec
+    rw [← Subtype.val_inj]
+    conv =>
+      rhs
+      rw [← h1]
+  right_inv := by
+    intro x
+    simp
+
+
 
 lemma SetTheory.Set.pow_fun_eq_iff {A B : Set} (x y : ↑(A ^ B)) : x = y ↔ pow_fun_equiv x = pow_fun_equiv y := by
   rw [←pow_fun_equiv.apply_eq_iff_eq]
 
+theorem SetTheory.Set.card_pow_one (X:Set) : (X ^ (∅:Set)).finite ∧ (X ^ (∅:Set)).card = 1 := by
+  set f : (∅:Set) → X := fun x ↦ False.elim (not_mem_empty _ x.property)
+  have h4 : ∃z, z ∈ (X ^ (∅:Set)) := by
+    use f
+    rw [powerset_axiom]
+    use f
+  obtain ⟨a, ha⟩ := h4
+  have h5 : (X ^ (∅:Set)) = {a} := by
+    ext x
+    simp
+    constructor <;> intro h
+    . obtain ⟨fa, hfa⟩ := h
+      rw [← hfa]
+      simp_all
+      obtain ⟨fb, hfb⟩ := ha
+      rw [←hfa, ← hfb]
+      rw [coe_of_fun, coe_of_fun]
+      simp
+      ext x
+      have h1 := x.property
+      have h2 := not_mem_empty x
+      contradiction
+    . simp_all
+  rw [h5]
+  have h6 := Example_3_6_7a a
+  constructor
+  . use 1
+  . apply has_card_to_card at h6
+    exact h6
+
+theorem SetTheory.Set.card_pow_eliminate {m :ℕ} {X:Set} (h : X.has_card (m + 1)) : ∃y ∈ X, (X \ {y}).has_card m ∧ (X \ {y}) ∪ {y} = X ∧ Disjoint (X \ {y}) {y} := by
+    have h5 := pos_card_nonempty (by aesop) h
+    obtain ⟨y, hy⟩ := nonempty_def h5
+    have h6 := card_erase (by aesop) h ⟨y, hy⟩
+    change  (X \ {y}).has_card (m) at h6
+    use y
+    constructor
+    . tauto
+    . constructor
+      . tauto
+      . constructor
+        . ext x
+          simp
+          constructor <;> intro h
+          . rcases h with h | h
+            . tauto
+            . rw [← h] at hy
+              exact hy
+          . by_cases h1 : x = y
+            . tauto
+            . tauto
+        . rw [disjoint_iff]
+          ext x
+          simp
+
+theorem SetTheory.Set.card_pow_equal_card (X:Set) (x:Object) : EqualCard (X ^ ({x}:Set)) X :=  by
+    unfold EqualCard
+    have h1 : x ∈ ({x}:Set) := by simp
+    set a : ({x}:Set) := ⟨x, h1⟩
+    have h2 (z : (X ^ ({x}:Set)).toSubtype) :   ∃f:({x}:Set) → X.toSubtype, f = z.val := by
+      have hz := z.property
+      rw [powerset_axiom] at hz
+      exact hz
+    set f : (X ^ ({x}:Set)).toSubtype → X.toSubtype := fun g ↦ (h2 g).choose a
+    use f
+    constructor
+    . intro a1 a2 ha12
+      unfold f at ha12
+      rw [← Subtype.val_inj]
+      have h3 := (h2 a1).choose_spec
+      have h4 := (h2 a2).choose_spec
+      rw [←h3, ← h4]
+      simp
+      ext z
+      have hz := z.property
+      simp at hz
+      have h5 : z = a := by
+        unfold a
+        rw [← Subtype.val_inj]
+        simp
+        exact hz
+      rw [h5]
+      rw [ha12]
+    . intro y
+      set g : ({x}:Set) → X := fun b ↦ y
+      set ag := function_to_object ({x}:Set) X g
+      have hag : ag ∈ (X ^ ({x}:Set)) := by
+        rw [powerset_axiom]
+        use g
+        unfold ag
+        rfl
+      use ⟨ag, hag⟩
+      unfold ag
+      unfold f
+      simp
+      generalize_proofs pf1
+      have h1 := pf1.choose_spec
+      have h2 := (coe_of_fun_inj pf1.choose g).mp h1
+      rw [h2]
+
+theorem SetTheory.Set.equal_card_means_equal_cardinality {X Y:Set} (hX: X.finite) : EqualCard X Y → X.card = Y.card := by
+  have h0 := hX
+  unfold finite at hX
+  have ⟨n, hn⟩ := hX
+  have h3 : X.card = n := by
+    unfold card
+    conv =>
+      lhs
+      simp [h0]
+    generalize_proofs
+    have h4 := hX.choose_spec
+    exact card_uniq h4 hn
+  unfold has_card at hn
+  intro h
+  . have h1 := h.symm.trans hn
+    have h2 : Y.has_card n := by
+      unfold has_card
+      exact h1
+    have hY : Y.finite := by
+      unfold finite
+      use n
+    rw [h3]
+    symm
+    unfold card
+    conv =>
+      lhs
+      simp [hY]
+    generalize_proofs pf1
+    have hpf1 := pf1.choose_spec
+    exact card_uniq hpf1 h2
+
+
+
+theorem SetTheory.Set.card_pow_id {X:Set} (hX: X.finite) (x:Object) : (X ^ ({x}:Set)).finite ∧ (X ^ ({x}:Set)).card = X.card := by
+  have h1 := equal_card_means_equal_cardinality hX (card_pow_equal_card X x).symm
+  symm
+  constructor
+  . exact h1.symm
+  . by_cases h2 : X.card = 0
+    . rw [h2] at h1
+      replace h1 := h1.symm
+      have h3 := empty_iff_card_eq_zero.mpr (And.intro hX h2)
+      rw [h3]
+      have h4 : ∀f, f∉ ((∅:Set) ^ ({x}:Set))  := by
+        intro f
+        by_contra hf
+        rw [powerset_axiom] at hf
+        obtain ⟨g, hg⟩ := hf
+        set a := g ⟨x, by simp⟩
+        have ha := a.property
+        have hb := not_mem_empty a
+        contradiction
+      have h5 := eq_empty_iff_forall_notMem.mpr h4
+      rw [h5]
+      simp
+    . push_neg at h2
+      have h3 := card_to_has_card h2 h1.symm
+      use X.card
+
+
+theorem SetTheory.Set.fun_obj_in {A B:Set} {g : B → A} : (function_to_object B A g) ∈ A ^ B := by
+  rw [powerset_axiom]
+  use g
+  rfl
+
+
+noncomputable def SetTheory.Set.inj_of_fun {X Y:Set} (f: (Y ^ X).toSubtype) : X → Y := by
+  have hf := f.property
+  rw [powerset_axiom] at hf
+  exact hf.choose
+
+theorem SetTheory.Set.card_pow_existance {A B C : Set}
+    (a : (A ^ (B ∪ C)).toSubtype) :
+    ∃ b : ((A ^ B) ×ˢ (A ^ C)).toSubtype,
+      (∀ (x : Object) (hx : x ∈ B),
+        inj_of_fun (fst b) ⟨x, hx⟩ =
+          inj_of_fun a ⟨x, by
+            rw [mem_union]
+            exact Or.inl hx⟩)
+            ∧
+      (∀ (x : Object) (hx : x ∈ C),
+        inj_of_fun (snd b) ⟨x, hx⟩ =
+          inj_of_fun a ⟨x, by
+            rw [mem_union]
+            exact Or.inr hx⟩)
+            := by
+    set l_inj : B → (B ∪ C).toSubtype := fun z ↦ ⟨z, by aesop⟩
+    set r_inj : C → (B ∪ C).toSubtype := fun z ↦ ⟨z, by aesop⟩
+    set a_fun := inj_of_fun a
+    set l1 : B → A := fun z ↦ a_fun (l_inj z)
+    set l2 : C → A := fun z ↦ a_fun (r_inj z)
+    set r1 := function_to_object B A l1
+    set r2 := function_to_object C A l2
+    set a1 : (A^B).toSubtype := ⟨r1, fun_obj_in⟩
+    set a2 : (A^C).toSubtype := ⟨r2, fun_obj_in⟩
+    set lr := mk_cartesian a1 a2
+    use lr
+    have h1 := fst_of_mk_cartesian a1 a2
+    have h2 := snd_of_mk_cartesian a1 a2
+    constructor <;> intro x hx
+    . unfold lr
+      rw [h1]
+      unfold a_fun
+      unfold a1
+      unfold r1
+      unfold l1
+      unfold inj_of_fun
+      unfold a_fun
+      unfold l_inj
+      unfold inj_of_fun
+      simp
+      generalize_proofs pf1 pf2 pf3 pf4
+      have hpf1 := pf1.choose_spec
+      have hpf3 := pf3.choose_spec
+      replace hpf3 := (coe_of_fun_inj _ _).mp hpf3
+      set z : B := ⟨x, hx⟩
+      have h2 := congr($hpf3 z)
+      simp at h2
+      unfold z at h2
+      exact h2
+    . unfold lr
+      rw [h2]
+      unfold a_fun
+      unfold a2
+      unfold r2
+      unfold l2
+      unfold inj_of_fun
+      unfold a_fun
+      unfold r_inj
+      unfold inj_of_fun
+      simp
+      generalize_proofs pf1 pf2 pf3 pf4
+      have hpf1 := pf1.choose_spec
+      have hpf3 := pf3.choose_spec
+      replace hpf3 := (coe_of_fun_inj _ _).mp hpf3
+      set z : C := ⟨x, hx⟩
+      have h2 := congr($hpf3 z)
+      simp at h2
+      unfold z at h2
+      exact h2
+
+theorem SetTheory.Set.cart_eq {A B:Set} {x y: A ×ˢB} :  x = y ↔ (fst x) = (fst y) ∧ (snd x) = (snd y) := by
+  constructor <;> intro h
+  . rw [h]
+    simp
+  . have h1 : mk_cartesian (fst x) (snd x) = x := by
+      rw [cartesian_eq]
+      tauto
+    have h2 : mk_cartesian (fst y) (snd y) = y := by
+      rw [cartesian_eq]
+      tauto
+    rw [← h1, ← h2, h.1, h.2]
+
+
+
+theorem SetTheory.Set.card_pow_union_eq {B C:Set} (A:Set) (hDisjoint: Disjoint B C): EqualCard (A ^ (B ∪ C)) ((A ^ B) ×ˢ (A ^ C)) := by
+  set f : (A ^ (B ∪ C)).toSubtype →  ((A ^ B) ×ˢ (A ^ C)).toSubtype := fun x ↦ (card_pow_existance x).choose
+  use f
+  constructor
+  . intro a1 a2 ha12
+    simp at f
+    unfold f at ha12
+    have hb1 := (card_pow_existance a1).choose_spec
+    have hb2 := (card_pow_existance a2).choose_spec
+    set b1 := (card_pow_existance a1).choose
+    set b2 := (card_pow_existance a2).choose
+    have ha1 := a1.property
+    have ha2 := a2.property
+    rw [powerset_axiom] at ha1 ha2
+    obtain ⟨f1, hf1⟩ := ha1
+    obtain ⟨f2, hf2⟩ := ha2
+    rw [← Subtype.val_inj]
+    rw [←hf1, ←hf2]
+    have hef1 : inj_of_fun a1 = f1  := by
+      ext x
+      unfold inj_of_fun
+      generalize_proofs pf1
+      have hpf1 := pf1.choose_spec
+      rw [← hpf1] at hf1
+      rw [coe_of_fun_inj] at hf1
+      have answer := congr($hf1 x)
+      rw [answer]
+    have hef2 : inj_of_fun a2 = f2 := by
+      ext x
+      unfold inj_of_fun
+      generalize_proofs pf1
+      have hpf1 := pf1.choose_spec
+      rw [← hpf1] at hf2
+      rw [coe_of_fun_inj] at hf2
+      have answer := congr($hf2 x)
+      rw [answer]
+    rw [hef1] at hb1
+    rw [hef2] at hb2
+    simp
+    ext x
+    simp_all
+    have hx := x.property
+    simp at hx
+    rcases hx with hx | hx
+    . have h1 := hb1.1 x hx
+      simp at h1
+      rw [h1]
+    . have h1 := hb1.2 x hx
+      simp at h1
+      rw [h1]
+  . intro abac
+    set abac1 := inj_of_fun (fst abac)
+    set abac2 := inj_of_fun (snd abac)
+    set g : (B ∪ C).toSubtype → A.toSubtype := fun bc ↦ by
+      if bc.val ∈ B then
+        exact abac1 ⟨bc, by aesop⟩
+      else
+        exact abac2 ⟨bc, by aesop⟩
+    set gobj := (function_to_object (B ∪ C) A g)
+    set m :  (A^(B ∪ C)).toSubtype := ⟨gobj, fun_obj_in⟩
+    use m
+    apply cart_eq.mpr
+    constructor
+    . unfold f
+      generalize_proofs pf1 pf2 pf3
+      have ⟨hpf31, hpf32⟩ := pf3.choose_spec
+      have h2 := m.property
+      rw [powerset_axiom] at h2
+      obtain ⟨fm, hfm⟩ := h2
+      have h3 : function_to_object _ _ g = fm := by
+        rw [hfm]
+      replace h3 := (coe_of_fun_inj _ _).mp h3
+      have h4 : (inj_of_fun m) = fm := by
+        ext x
+        unfold inj_of_fun
+        generalize_proofs pf4
+        have hpf4 := pf4.choose_spec
+        conv at hpf4 =>
+          rhs
+          rw [← hfm]
+        replace hpf4 := (coe_of_fun_inj _ _).mp hpf4
+        rw [hpf4]
+      rw [← h3] at h4
+      have h5 := (fst pf3.choose).property
+      have h6 := (fst abac).property
+      rw [powerset_axiom] at h5 h6
+      obtain ⟨f5, hf5⟩ := h5
+      obtain ⟨f6, hf6⟩ := h6
+      rw [← Subtype.val_inj]
+      rw [← hf5,← hf6]
+      simp
+      ext x
+      replace hpf31 := hpf31 x x.property
+      conv at hpf31 =>
+        rhs
+        rw [h4]
+        unfold g
+        simp [x.property]
+        unfold abac1
+      simp at hpf31
+      set fa1 := (fst pf3.choose)
+      set fa2 := (fst abac)
+      have hfa1 : inj_of_fun fa1 = f5 := by
+        ext z
+        unfold inj_of_fun
+        generalize_proofs pfa1
+        have hpfa1 := pfa1.choose_spec
+        conv at hpfa1 =>
+          rhs
+          rw [← hf5]
+        rw [coe_of_fun_inj] at hpfa1
+        rw [hpfa1]
+      have hfa2 : inj_of_fun fa2 = f6 := by
+        ext z
+        unfold inj_of_fun
+        generalize_proofs pfa1
+        have hpfa1 := pfa1.choose_spec
+        conv at hpfa1 =>
+          rhs
+          rw [← hf6]
+        rw [coe_of_fun_inj] at hpfa1
+        rw [hpfa1]
+      rw [hfa1, hfa2] at hpf31
+      rw [hpf31]
+    . unfold f
+      generalize_proofs pf1 pf2 pf3
+      have ⟨hpf31, hpf32⟩ := pf3.choose_spec
+      have h2 := m.property
+      rw [powerset_axiom] at h2
+      obtain ⟨fm, hfm⟩ := h2
+      have h3 : function_to_object _ _ g = fm := by
+        rw [hfm]
+      replace h3 := (coe_of_fun_inj _ _).mp h3
+      have h4 : (inj_of_fun m) = fm := by
+        ext x
+        unfold inj_of_fun
+        generalize_proofs pf4
+        have hpf4 := pf4.choose_spec
+        conv at hpf4 =>
+          rhs
+          rw [← hfm]
+        replace hpf4 := (coe_of_fun_inj _ _).mp hpf4
+        rw [hpf4]
+      rw [← h3] at h4
+      have h5 := (snd pf3.choose).property
+      have h6 := (snd abac).property
+      rw [powerset_axiom] at h5 h6
+      obtain ⟨f5, hf5⟩ := h5
+      obtain ⟨f6, hf6⟩ := h6
+      rw [← Subtype.val_inj]
+      rw [← hf5,← hf6]
+      simp
+      ext x
+      replace hpf32 := hpf32 x x.property
+      have h5 : x.val ∉ B := by
+        intro h6
+        rw [disjoint_iff] at hDisjoint
+        have h7 : x.val ∈ B ∩ C := by
+          simp
+          constructor
+          . exact h6
+          . exact x.property
+        rw [hDisjoint] at h7
+        have h8 := not_mem_empty x
+        contradiction
+      conv at hpf32 =>
+        rhs
+        rw [h4]
+        unfold g
+        simp [h5]
+        unfold abac2
+      simp at hpf32
+      set fa1 := (snd pf3.choose)
+      set fa2 := (snd abac)
+      have hfa1 : inj_of_fun fa1 = f5 := by
+        ext z
+        unfold inj_of_fun
+        generalize_proofs pfa1
+        have hpfa1 := pfa1.choose_spec
+        conv at hpfa1 =>
+          rhs
+          rw [← hf5]
+        rw [coe_of_fun_inj] at hpfa1
+        rw [hpfa1]
+      have hfa2 : inj_of_fun fa2 = f6 := by
+        ext z
+        unfold inj_of_fun
+        generalize_proofs pfa1
+        have hpfa1 := pfa1.choose_spec
+        conv at hpfa1 =>
+          rhs
+          rw [← hf6]
+        rw [coe_of_fun_inj] at hpfa1
+        rw [hpfa1]
+      rw [hfa1, hfa2] at hpf32
+      rw [hpf32]
+
+-- theorem SetTheory.Set.card_pow_finite {A B: Set} (hA : A.finite) (hB : B.finite) : ((A ^ B).finite) := by
+--   obtain ⟨n, nh⟩ := hB
+--   revert A B
+--   induction' n with m hm
+--   . intro A B h1 h2
+--     have h3 := has_card_zero.mp h2
+--     rw [h3]
+--     exact (card_pow_one A).1
+--   . intro A B h1 h2
+--     have h3 := card_pow_eliminate h2
+--     obtain ⟨y, ⟨hy1, ⟨hy2, ⟨hy3, hy4⟩⟩⟩⟩ := h3
+--     have hm1 := hm h1 hy2
+--     have h2 := (card_pow_id h1 y).1
+--     have h3 := (card_prod hm1 h2).1
+--     have h31 := (card_prod hm1 h2).2
+--     have h4 := (card_pow_union_eq A hy4).symm
+--     have h1 := (equal_card_means_equal_cardinality h3 h4).symm
+--     simp [hy3] at h1
+--     by_cases not_zero : ((A ^ (B \ {y})) ×ˢ (A ^ ({y}:Set))).card = 0
+--     . rw [h31] at not_zero
+--       have h1 :  (A ^ (B \ {y})).card = 0 ∨ (A ^ ({y}:Set)).card = 0 := by
+--         exact Nat.mul_eq_zero.mp not_zero
+--       rcases h1 with h1 | h1
+--       .
+
+
+
+
+theorem SetTheory.Set.card_zero_pow {X:Set} (hX1 : X.card ≠ 0): ((∅:Set) ^ X).finite ∧ ((∅:Set) ^ X).card = 0 := by
+  have h0: X ≠ ∅ := by
+    intro h1
+    have h2 := card_eq_zero_of_empty h1
+    contradiction
+  have ⟨y, hy⟩ := nonempty_def h0
+  have h1: ∀f, f ∉ ((∅:Set) ^ X) := by
+    intro f
+    by_contra h1
+    rw [powerset_axiom] at h1
+    obtain ⟨g, hg⟩ := h1
+    set z := g ⟨y, hy⟩
+    have hz := z.property
+    have hz1 := not_mem_empty z
+    contradiction
+  have h2 := eq_empty_iff_forall_notMem.mpr h1
+  rw [h2]
+  simp
+
+
 /-- Proposition 3.6.14 (f) / Exercise 3.6.4 -/
 theorem SetTheory.Set.card_pow {X Y:Set} (hY: Y.finite) (hX: X.finite) :
-    (Y ^ X).finite ∧ (Y ^ X).card = Y.card ^ X.card := by sorry
+    (Y ^ X).finite ∧ (Y ^ X).card = Y.card ^ X.card := by
+      obtain ⟨n, nh⟩ := hX
+      revert X Y
+      induction' n with m hm
+      . intro X Y h1 h2
+        have h3 := has_card_zero.mp h2
+        rw [h3]
+        simp
+        exact (card_pow_one Y)
+      . intro X Y h1 h2
+        have h3 := card_pow_eliminate h2
+        obtain ⟨y, ⟨hy1, ⟨hy2, ⟨hy3, hy4⟩⟩⟩⟩ := h3
+        have hm1 := hm h1 hy2
+        have hx2 := (card_pow_id h1 y)
+        have h3 := (card_prod hm1.1 hx2.1)
+        have h4 := (card_pow_union_eq Y hy4).symm
+        have hxx1 := (equal_card_means_equal_cardinality h3.1 h4).symm
+        simp [hy3] at hxx1
+        have h_x_y_finite : (X \ {y}).finite := by
+            unfold finite
+            use m
+        have h_x_y_card_m : (X \ {y}).card = m := by
+            unfold card
+            simp [h_x_y_finite]
+            generalize_proofs pf1
+            have hpf1 := pf1.choose_spec
+            exact card_uniq hpf1 hy2
+        have h_x_finite : X.finite := by
+            unfold finite
+            use (m+1)
+        have h_x_card_m_1 : X.card = (m+1) := by
+            unfold card
+            simp [h_x_finite]
+            generalize_proofs pf1
+            have hpf1 := pf1.choose_spec
+            exact card_uniq hpf1 h2
+        have h_y_id := (card_pow_id h1 y).2
+        by_cases not_zero : ((Y ^ (X \ {y})) ×ˢ (Y ^ ({y}:Set))).card = 0
+        . have h_init : Y = ∅ := by
+            rw [h3.2] at not_zero
+            have hx1 := Nat.mul_eq_zero.mp not_zero
+            rcases hx1 with hx1 | hx1
+            . by_cases h2 : ((X \ {y})) = ∅
+              . rw [h2] at hx1
+                have h3 := (card_pow_one Y).2
+                omega
+              . rw [hm1.2] at hx1
+                push_neg at h2
+                have h : (X \ {y}) ≠ ∅ → ¬ (X \ {y}).has_card 0 := by
+                  intro hX
+                  contrapose! hX
+                  exact has_card_zero.mp hX
+                have h5 := h h2
+                have h6 : (X \ {y}).card ≠ 0 := by
+                  unfold card
+                  simp [h_x_y_finite]
+                  generalize_proofs pf1
+                  have hpf1 := pf1.choose_spec
+                  intro h1
+                  rw [h1] at hpf1
+                  contradiction
+                have h7 : Y.card = 0 := eq_zero_of_pow_eq_zero hx1
+                exact empty_iff_card_eq_zero.mpr (And.intro h1 h7)
+            . rw [h_y_id] at hx1
+              exact empty_iff_card_eq_zero.mpr (And.intro h1 hx1)
+          simp [h_init]
+          have h6 : X.card ≠ 0 := by
+            omega
+          have h7 := card_zero_pow h6
+          constructor
+          . exact h7.1
+          . have h8 : 0 ^ X.card = 0 := by
+              exact zero_pow h6
+            rw [h8]
+            exact h7.2
+        . push_neg at not_zero
+          set A := ((Y ^ (X \ {y})) ×ˢ (Y ^ ({y}:Set)))
+          have h5 : A.card = A.card := by rfl
+          have h6 := card_to_has_card not_zero h5
+          have h7 : A.finite := by
+            unfold finite
+            use A.card
+          have h8 := (equal_card_means_equal_cardinality h7 h4).symm
+          simp [hy3] at h8
+          have h9 :  (Y ^ X).card ≠ 0 := by
+            rw [← h8] at not_zero
+            exact not_zero
+          rw [h3.2] at h8
+          rw [hm1.2] at h8
+          rw [h_x_y_card_m] at h8
+          rw [h_y_id] at h8
+          change ((Y ^ X).card = Y.card ^ (m + 1)) at h8
+          rw [← h_x_card_m_1] at h8
+          constructor
+          . unfold finite
+            use (Y ^ X).card
+            exact card_to_has_card h9 (by rfl)
+          . exact h8
+
 
 /-- Exercise 3.6.5. You might find {name}`SetTheory.Set.prod_commutator` useful. -/
 theorem SetTheory.Set.prod_EqualCard_prod (A B:Set) :
-    EqualCard (A ×ˢ B) (B ×ˢ A) := by sorry
+    EqualCard (A ×ˢ B) (B ×ˢ A) := by
+      unfold EqualCard
+      set f : (A ×ˢ B) → (B ×ˢ A) := fun x ↦ mk_cartesian (snd x) (fst x)
+      use f
+      constructor
+      . intro a1 a2 ha12
+        unfold f at ha12
+        unfold mk_cartesian at ha12
+        simp at ha12
+        ext
+        have ha1 := pair_eq_fst_snd a1
+        have ha2 := pair_eq_fst_snd a2
+        rw [ha12.1, ha12.2] at ha1
+        rw [← ha2] at ha1
+        exact ha1
+      . intro y
+        use (mk_cartesian (snd y) (fst y))
+        unfold f
+        simp
+
 
 noncomputable abbrev SetTheory.Set.pow_fun_equiv' (A B : Set) : ↑(A ^ B) ≃ (B → A) :=
   pow_fun_equiv (A:=A) (B:=B)
 
 /-- Exercise 3.6.6. You may find {name}`SetTheory.Set.curry_equiv` useful. -/
 theorem SetTheory.Set.pow_pow_EqualCard_pow_prod (A B C:Set) :
-    EqualCard ((A ^ B) ^ C) (A ^ (B ×ˢ C)) := by sorry
+    EqualCard ((A ^ B) ^ C) (A ^ (B ×ˢ C)) := by
+      unfold EqualCard
+      have h1 := pow_fun_equiv' A B
+      have h2 := pow_fun_equiv' (A ^ B) C
+      have h3 :  ((A ^ B) ^ C).toSubtype ≃ (C.toSubtype → (B.toSubtype → A.toSubtype)) := by
+         exact h2.trans ((Equiv.refl C.toSubtype).arrowCongr h1)
+      have h4 := pow_fun_equiv'  A (B ×ˢ C)
+      set f : ((A ^ B) ^ C :Set) → (A ^ (B ×ˢ C) : Set) := fun x ↦ h4.symm (SetTheory.Set.curry_equiv (fun b c ↦ h3 x c b))
+      use f
+      constructor
+      . intro a1 a2 ha12
+        unfold f at ha12
+        simp at ha12
+        have ha1 := a1.property
+        have ha2 := a2.property
+        simp at ha1
+        simp at ha2
+        apply h3.injective
+        ext c b
+        set a := mk_cartesian b c
+        have ha34 := congr($ha12 a)
+        simp at ha34
+        rw [ha34]
+      . intro y
+        have h5 := h4.symm.surjective y
+        obtain ⟨a, ha⟩ := h5
+        have h6 := curry_equiv.surjective a
+        obtain ⟨b, hb⟩ := h6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 theorem SetTheory.Set.pow_pow_eq_pow_mul (a b c:ℕ): (a^b)^c = a^(b*c) := by sorry
 
