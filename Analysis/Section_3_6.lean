@@ -2954,12 +2954,76 @@ theorem SetTheory.Set.Permutations_inj {n: ℕ} (p1 p2: Permutations n) :
         rw [h]
       . rw [h]
 
+theorem SetTheory.Set.equiv_equiv_to_perm {n : ℕ} (u: Fin n ≃ Fin n): ∃v : Permutations n, Permutations_toFun v = u := by
+  have hu := u.bijective
+  set f : Fin n → Fin n := u.toFun
+  set of := function_to_object (Fin n) (Fin n) f
+  have h1 : of ∈ Fin n ^ Fin n := by
+    simp only [powerset_axiom]
+    use f
+    rfl
+  have ha1 : pow_fun_equiv ⟨of, h1⟩ = f  := by
+    unfold pow_fun_equiv
+    simp
+    generalize_proofs pf1
+    have hpf1 := pf1.choose_spec
+    unfold of at hpf1
+    have hpf2 := (function_to_object _ _).injective hpf1
+    exact hpf2
+  have hof : of ∈ Permutations n := by
+    simp only [Permutations ]
+    simp only [specification_axiom'']
+    simp only [powerset_axiom]
+    constructor
+    . constructor
+      . intro a1 a2 a12
+        change pow_fun_equiv ⟨of, h1⟩ a1 = pow_fun_equiv ⟨of,h1⟩ a2 at a12
+        rw [ha1] at a12
+        exact u.injective a12
+      . intro b
+        rw [ha1]
+        have ⟨a, hb⟩ := u.surjective b
+        use a
+        exact hb
+    . use f
+      rfl
+  use ⟨of, hof⟩
+  unfold Permutations_toFun
+  generalize_proofs pf1 pf2
+  have hpf2 := pf2 pf1
+  simp
+  generalize_proofs pf3
+  have hpf3 := pf3.choose_spec
+  unfold of at hpf3
+  exact (function_to_object _ _).injective hpf3
+
 /-- This connects our concept of a permutation with Mathlib's {name}`Equiv` between {lean}`Fin n` and {lean}`Fin n`. -/
 noncomputable def SetTheory.Set.perm_equiv_equiv {n : ℕ} : Permutations n ≃ (Fin n ≃ Fin n) := {
   toFun := fun p => Equiv.ofBijective (Permutations_toFun p) (Permutations_bijective p)
-  invFun := sorry
-  left_inv := sorry
-  right_inv := sorry
+  invFun := fun p => (equiv_equiv_to_perm p).choose
+  left_inv := by
+    intro a
+    apply (Permutations_inj _ _).mp
+    simp only []
+    generalize_proofs pf1 pf2
+    ext x
+    have hpf2 := pf2.choose_spec
+    simp at hpf2
+    rw [hpf2]
+    simp
+  right_inv := by
+    intro a
+    simp
+    generalize_proofs pf1 pf2
+    have hpf1 := pf1.choose_spec
+    conv =>
+      lhs
+      lhs
+      rw [hpf1]
+    generalize_proofs pf3
+    apply Equiv.ext
+    intro x
+    simp
 }
 
 /- Exercise 3.6.12 involves a lot of moving between `Fin n` and `Fin (n + 1)` so let's add some conveniences. -/
