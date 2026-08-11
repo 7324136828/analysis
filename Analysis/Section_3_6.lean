@@ -3200,9 +3200,34 @@ theorem SetTheory.Set.card_iUnion_card_disjoint {n m: ℕ} {S : Fin n → Set}
 -/
 noncomputable def SetTheory.Set.Fin.predAbove {n} (i : Fin (n + 1)) (x : Fin (n + 1)) (h : x ≠ i) : Fin n :=
   if hx : (x:ℕ) < i then
-    Fin_mk _ (x:ℕ) (by sorry)
+    Fin_mk _ (x:ℕ) (by
+      have h1 := i.property
+      rw [mem_Fin] at h1
+      obtain ⟨m, ⟨hm1, hm2⟩⟩ := h1
+      simp at hm2
+      rw [← hm2] at hm1
+      omega
+    )
   else
-    Fin_mk _ ((x:ℕ) - 1) (by sorry)
+    Fin_mk _ ((x:ℕ) - 1) (by
+      have h1 := x.property
+      rw [mem_Fin] at h1
+      obtain ⟨m, ⟨hm1, hm2⟩⟩ := h1
+      simp at hm2
+      simp at h
+      rw [← hm2] at hm1
+      push_neg at hx
+      have h2 : (i:ℕ) < (x:ℕ)  := by
+        rw [Nat.le_iff_lt_or_eq] at hx
+        rcases hx with hx | hx
+        . exact hx
+        . rw [hx] at h
+          contradiction
+      have h3 : 0 ≤ (i:ℕ) := by
+        simp
+      have h4 : 0 < (x:ℕ)  := by omega
+      omega
+    )
 
 /--
   We can expand {lean}`x : Fin n` into {lean}`Fin (n + 1)` by shifting all {lean}`(x : ℕ) ≥ i` up by one.
@@ -3211,20 +3236,64 @@ noncomputable def SetTheory.Set.Fin.predAbove {n} (i : Fin (n + 1)) (x : Fin (n 
 -/
 noncomputable def SetTheory.Set.Fin.succAbove {n} (i : Fin (n + 1)) (x : Fin n) : Fin (n + 1) :=
   if (x:ℕ) < i then
-    Fin_embed _ _ (by sorry) x
+    Fin_embed _ _ (by linarith) x
   else
-    Fin_mk _ ((x:ℕ) + 1) (by sorry)
+    Fin_mk _ ((x:ℕ) + 1) (by
+      have hi := i.property
+      have hx := x.property
+      rw [mem_Fin] at hx
+      obtain ⟨m, ⟨hm1, hm2⟩⟩ := hx
+      simp at hm2
+      rw [← hm2] at hm1
+      omega
+    )
 
 @[simp]
-theorem SetTheory.Set.Fin.succAbove_ne {n} (i : Fin (n + 1)) (x : Fin n) : succAbove i x ≠ i := by sorry
+theorem SetTheory.Set.Fin.succAbove_ne {n} (i : Fin (n + 1)) (x : Fin n) : succAbove i x ≠ i := by
+  unfold succAbove
+  by_cases h : (x:ℕ) < i
+  . simp [h]
+    omega
+  . simp [h]
+    omega
 
 @[simp]
 theorem SetTheory.Set.Fin.succAbove_predAbove {n} (i : Fin (n + 1)) (x : Fin (n + 1)) (h : x ≠ i) :
-    (succAbove i) (predAbove i x h) = x := by sorry
+    (succAbove i) (predAbove i x h) = x := by
+      unfold succAbove predAbove
+      split_ifs with h1 h2 h3
+      . simp
+      . simp at h1 h2
+        omega
+      . simp at h1 h3
+        simp at h
+        omega
+      . simp
+        simp at h1 h3
+        simp at h
+        have h4 : (i:ℕ) < (x:ℕ)  := by
+          rw [Nat.le_iff_lt_or_eq] at h1
+          rcases h1 with h1 | h1
+          . exact h1
+          . rw [h1] at h
+            contradiction
+        have h5 : 0 ≤ (i:ℕ) := by
+          simp
+        have h6 : 0 < (x:ℕ)  := by omega
+        omega
 
 @[simp]
 theorem SetTheory.Set.Fin.predAbove_succAbove {n} (i : Fin (n + 1)) (x : Fin n) :
-    (predAbove i) (succAbove i x) (succAbove_ne i x) = x := by sorry
+    (predAbove i) (succAbove i x) (succAbove_ne i x) = x := by
+      unfold predAbove succAbove succAbove_ne
+      split_ifs with h1 h2 h3
+      . simp
+      . simp
+        simp at h1 h2
+        omega
+      . simp at h1 h3
+        omega
+      . simp
 
 /-- Exercise 3.6.12 (i), second part -/
 theorem SetTheory.Set.Permutations_ih (n: ℕ):
