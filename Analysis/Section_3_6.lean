@@ -2667,6 +2667,61 @@ theorem SetTheory.Set.card_union_add_card_inter {A B:Set} (hA: A.finite) (hB: B.
       rw [hDB] at h8
       rw [h8]
 
+theorem SetTheory.Set.fin_zero_is_empty_set: (Fin 0) = ∅ := by
+  rw [eq_empty_iff_forall_notMem]
+  grind [specification_axiom'']
+
+theorem SetTheory.Set.iUnion_of_fin_zero_has_no_ele (A : (Fin 0).toSubtype → Set):  ∀x, x ∉ (Fin 0).iUnion A := by
+    intro x
+    by_contra h2
+    rw [mem_iUnion] at h2
+    obtain ⟨a, ha⟩ := h2
+    have hpa := a.property
+    simp [fin_zero_is_empty_set] at hpa
+
+theorem SetTheory.Set.iUnion_of_fin_zero_is_empty (A : (Fin 0).toSubtype → Set): (Fin 0).iUnion A = ∅ := by
+  have h1 := iUnion_of_fin_zero_has_no_ele A
+  aesop
+
+theorem SetTheory.Set.split_iUnion_into_unions (m:ℕ) (A : (Fin (m + 1)).toSubtype → Set): (Fin (m + 1)).iUnion A = ((Fin m).iUnion (fun x ↦ A (Fin_embed m (m+1) (by linarith) x))) ∪ (A (Fin_mk (m+1) m (by linarith))) := by
+  set inj : Fin m → Fin (m+1) := fun x ↦ Fin_embed m (m+1) (by linarith) x
+  set B : (Fin m).toSubtype → Set := fun x ↦ A (inj x)
+  set last := Fin_mk (m+1) m (by linarith)
+  ext x
+  simp
+  rw [mem_iUnion] at *
+  constructor <;> intro h
+  . obtain ⟨w, hwp⟩ := h
+    have hw := w.property
+    rw [mem_Fin] at hw
+    obtain ⟨wz, hwz⟩ := hw
+    by_cases hw_case : wz < m
+    . apply Or.inl
+      rw [mem_iUnion]
+      have hw_1 : w.val ∈ Fin m := by
+        rw [mem_Fin]
+        use wz
+        tauto
+      use ⟨w, hw_1⟩
+    . push_neg at hw_case
+      have hw_eq : wz = m := by omega
+      apply Or.inr
+      have hlast_w : last = w := by
+        unfold last
+        unfold Fin_mk
+        simp
+        conv =>
+          lhs
+          rw [← hw_eq]
+        aesop
+      rw [hlast_w]
+      exact hwp
+  rcases h with h | h
+  . rw [mem_iUnion] at h
+    obtain ⟨a, ha⟩ := h
+    use (inj a)
+  . use last
+
 
 /-- Exercise 3.6.10 -/
 theorem SetTheory.Set.pigeonhole_principle {n:ℕ} {A: Fin n → Set}
@@ -2674,21 +2729,10 @@ theorem SetTheory.Set.pigeonhole_principle {n:ℕ} {A: Fin n → Set}
     revert A
     induction' n with m hm
     . intro A hA hAcard
-      have h1 : (Fin 0) = ∅ := by
-        rw [eq_empty_iff_forall_notMem]
-        grind [specification_axiom'']
+      have h1 := fin_zero_is_empty_set
       simp at hAcard
       simp
-      have h2 : ∀x, x ∉ (Fin 0).iUnion A := by
-       intro x
-       by_contra h2
-       rw [mem_iUnion] at h2
-       obtain ⟨a, ha⟩ := h2
-       have hpa := a.property
-       simp [h1] at hpa
-      have h3 : (Fin 0).iUnion A = ∅ := by
-        aesop
-      rw [h3] at hAcard
+      rw [iUnion_of_fin_zero_is_empty] at hAcard
       simp at hAcard
     . intro A hA hACard
       set last := Fin_mk (m+1) m (by linarith)
@@ -2702,41 +2746,7 @@ theorem SetTheory.Set.pigeonhole_principle {n:ℕ} {A: Fin n → Set}
           intro i
           unfold B
           exact hA (inj i)
-        have h2 :  (Fin (m + 1)).iUnion A = ((Fin m).iUnion B) ∪ (A last) := by
-          ext x
-          simp
-          rw [mem_iUnion] at *
-          constructor <;> intro h
-          . obtain ⟨w, hwp⟩ := h
-            have hw := w.property
-            rw [mem_Fin] at hw
-            obtain ⟨wz, hwz⟩ := hw
-            by_cases hw_case : wz < m
-            . apply Or.inl
-              rw [mem_iUnion]
-              have hw_1 : w.val ∈ Fin m := by
-                rw [mem_Fin]
-                use wz
-                tauto
-              use ⟨w, hw_1⟩
-            . push_neg at hw_case
-              have hw_eq : wz = m := by omega
-              apply Or.inr
-              have hlast_w : last = w := by
-                unfold last
-                unfold Fin_mk
-                simp
-                conv =>
-                  lhs
-                  rw [← hw_eq]
-                aesop
-              rw [hlast_w]
-              exact hwp
-          rcases h with h | h
-          . rw [mem_iUnion] at h
-            obtain ⟨a, ha⟩ := h
-            use (inj a)
-          . use last
+        have h2 := split_iUnion_into_unions m A
         set U :=  (Fin m).iUnion B
         set V := A last
         set W := ((Fin (m + 1)).iUnion A)
@@ -3033,10 +3043,29 @@ def SetTheory.Set.Fin.castSucc {n} (x : Fin n) : Fin (n + 1) :=
   Fin_embed _ _ (by omega) x
 
 @[simp]
-lemma SetTheory.Set.Fin.castSucc_inj {n} {x y : Fin n} : castSucc x = castSucc y ↔ x = y := by sorry
+lemma SetTheory.Set.Fin.castSucc_inj {n} {x y : Fin n} : castSucc x = castSucc y ↔ x = y := by
+  constructor <;> intro h
+  . unfold castSucc at h
+    simp at h
+    ext
+    exact h
+  . rw [h]
 
 @[simp]
-theorem SetTheory.Set.Fin.castSucc_ne {n} (x : Fin n) : castSucc x ≠ n := by sorry
+theorem SetTheory.Set.Fin.castSucc_ne {n} (x : Fin n) : castSucc x ≠ n := by
+  unfold castSucc
+  unfold Fin_embed
+  generalize_proofs pf1
+  intro h
+  have h1 := x.property
+  have h2 := pf1
+  rw [mem_Fin] at h1 h2
+  obtain ⟨m1, ⟨hm11, hm12⟩⟩ := h1
+  simp at h
+  rw [← Object.natCast_inj, Fin.coe_toNat] at h
+  rw [h] at hm12
+  simp at hm12
+  omega
 
 /-- Any {lean}`Fin (n + 1)` except {lean}`n` can be cast to {lean}`Fin n`. Compare to Mathlib {name}`Fin.castPred`. -/
 noncomputable def SetTheory.Set.Fin.castPred {n} (x : Fin (n + 1)) (h : (x : ℕ) ≠ n) : Fin n :=
@@ -3044,11 +3073,17 @@ noncomputable def SetTheory.Set.Fin.castPred {n} (x : Fin (n + 1)) (h : (x : ℕ
 
 @[simp]
 theorem SetTheory.Set.Fin.castSucc_castPred {n} (x : Fin (n + 1)) (h : (x : ℕ) ≠ n) :
-    castSucc (castPred x h) = x := by sorry
+    castSucc (castPred x h) = x := by
+      unfold castSucc
+      unfold castPred
+      simp [Fin_embed]
 
 @[simp]
 theorem SetTheory.Set.Fin.castPred_castSucc {n} (x : Fin n) (h : ((castSucc x : Fin (n + 1)) : ℕ) ≠ n) :
-    castPred (castSucc x) h = x := by sorry
+    castPred (castSucc x) h = x := by
+      unfold castSucc
+      unfold castPred
+      simp
 
 /-- Any natural {lean}`n` can be cast to {lean}`Fin (n + 1)`. Compare to Mathlib {name}`Fin.last`. -/
 def SetTheory.Set.Fin.last (n : ℕ) : Fin (n + 1) := Fin_mk _ n (by omega)
@@ -3057,7 +3092,105 @@ def SetTheory.Set.Fin.last (n : ℕ) : Fin (n + 1) := Fin_mk _ n (by omega)
 theorem SetTheory.Set.card_iUnion_card_disjoint {n m: ℕ} {S : Fin n → Set}
     (hSc : ∀ i, (S i).has_card m)
     (hSd : Pairwise fun i j => Disjoint (S i) (S j)) :
-    ((Fin n).iUnion S).finite ∧ ((Fin n).iUnion S).card = n * m := by sorry
+    ((Fin n).iUnion S).finite ∧ ((Fin n).iUnion S).card = n * m := by
+      revert S
+      induction' n with l hl
+      . intro S hSc hSd
+        have h1 := iUnion_of_fin_zero_is_empty S
+        rw [h1]
+        simp
+      . intro S hSc hSd
+        have h1 := split_iUnion_into_unions l S
+        set inj : Fin l → Fin (l+1) := fun x ↦ Fin_embed l (l+1) (by linarith) x
+        set B : (Fin l).toSubtype → Set := fun x ↦ S (inj x)
+        set last := Fin_mk (l+1) l (by linarith)
+        have h2 : ∀ (i : (Fin l).toSubtype), (B i).has_card m := by
+          intro i
+          unfold B
+          exact hSc (inj i)
+        unfold Pairwise at hSd
+        have h3 : (Pairwise fun i j ↦ Disjoint (B i) (B j)) := by
+          unfold Pairwise
+          intro a1 a2 ha12
+          unfold B
+          have h4 : (inj a1) ≠  (inj a2) := by
+            unfold inj
+            simp
+            push_neg
+            simp at ha12
+            push_neg at ha12
+            by_contra h5
+            rw [Subtype.val_inj] at h5
+            rw [h5] at ha12
+            contradiction
+          have h5 := hSd h4
+          simp at h5
+          exact h5
+          -- have h2 := hSd (inj a1) (inj a2)
+        have hl1 := hl h2 h3
+        have h5 (x : (Fin l).iUnion B) : ∃z, z ≠ last ∧ x.val ∈ S z  := by
+          have hx := x.property
+          rw [mem_iUnion] at hx
+          obtain ⟨y, hy⟩ := hx
+          unfold B at hy
+          use (inj y)
+          constructor
+          . unfold inj
+            simp
+            have hpy := y.property
+            rw [mem_Fin] at hpy
+            obtain ⟨my ,⟨hmy1, hmy2⟩⟩ := hpy
+            intro h1
+            rw [← Object.natCast_inj, Fin.coe_toNat] at h1
+            rw [h1] at hmy2
+            simp at hmy2
+            omega
+          . exact hy
+        have h6 (x : (Fin l).iUnion B) : x.val ∉ S last := by
+          have ⟨a, ⟨ha1, ha2⟩⟩ := h5 x
+          have hb1 := hSd ha1
+          simp at hb1
+          rw [disjoint_iff] at hb1
+          intro hc
+          have hd : ↑x ∈ S a ∩ (S last) := by
+            simp
+            tauto
+          rw [hb1] at hd
+          have he := not_mem_empty x
+          contradiction
+        have h7 : Disjoint ((Fin l).iUnion B) (S last) := by
+          rw [disjoint_iff]
+          ext x
+          constructor <;> intro h
+          . simp at h
+            have h8 :=  h6 ⟨x, h.1⟩
+            simp at h8
+            have h9 := h.2
+            contradiction
+          . simp
+            have he := not_mem_empty x
+            contradiction
+        have h8 : (S last).finite := by
+          use m
+          exact hSc last
+        have h81 : (S last).card = m := by
+          unfold card
+          simp [h8]
+          generalize_proofs pf1
+          have hpf1 := pf1.choose_spec
+          have hpf2 := hSc last
+          exact card_uniq hpf1 hpf2
+        have h9 := card_union hl1.1 h8
+        have h10 := card_union_disjoint hl1.1 h8 h7
+        rw [← h1] at h9 h10
+        constructor
+        . exact h9.1
+        . rw [hl1.2] at h10
+          rw [h81] at h10
+          rw [h10]
+          linarith
+
+
 
 /- Finally, we'll set up a way to shrink `Fin (n + 1)` into `Fin n` (or expand the latter) by making a hole. -/
 
