@@ -3517,157 +3517,276 @@ theorem SetTheory.Set.Permutations_ih (n: ℕ):
     set f1 : (S i) → (Fin n ≃ Fin n) := fun x ↦ Equiv.ofBijective (f x) (h_f_bijective x)
     set f_to_fun : (S i) → Permutations n := fun x ↦ (perm_equiv_equiv.symm (f1 x))
 
-    -- noncomputable def SetTheory.Set.Fin.succAbove {n} (i : Fin (n + 1)) (x : Fin n) : Fin (n + 1) :=
+    -- have hx_pre_1 {x : Fin (n+1) → Fin (n+1)} (hx1 : (function_to_object (Fin (n + 1)) (Fin (n + 1)) x) ∈ Permutations (n+1)):  Permutations_toFun ⟨(function_to_object (Fin (n + 1)) (Fin (n + 1))) x, hx1⟩ = x := by
 
-    set g : Permutations n → (Fin (n+1) → Fin (n+1)) := fun x ↦ (fun j ↦ by
-      if h1 : j ≠ n then
-        set m :=  ((Permutations_toFun x) (Fin.castPred j h1))
-        exact Fin.succAbove i m
-      else
-        exact i
-    )
-    have hg_bijective {x:Permutations n} : Function.Bijective (g x) := by
+    have hx_pre_5 {x : Fin (n+1) → Fin (n+1)} (hx1 : (function_to_object (Fin (n + 1)) (Fin (n + 1)) x) ∈ Permutations (n+1)): (perm_equiv_equiv ⟨(function_to_object (Fin (n + 1)) (Fin (n + 1))) x, hx1⟩) = x := by
+        funext z
+        unfold perm_equiv_equiv
+        conv =>
+          lhs
+          simp
+          unfold Permutations_toFun
+        generalize_proofs pf1
+        have hpf1 := pf1.choose_spec
+        simp  at hpf1
+        have h2 := (coe_of_fun_inj _ _).mp hpf1
+        rw [h2]
+
+    have hx_inv {x : Fin (n+1) → Fin (n+1)}(hx1 : (function_to_object _ _ x) ∈ Permutations (n+1)) (hx2 : (x (Fin.last n)) = i): (function_to_object _ _ x) ∈ (S i) := by
+        unfold S
+        rw [specification_axiom'']
+        use hx1
+        have hz := hx_pre_5 hx1
+        simp [hz]
+        simp at hx2
+        exact hx2
+    have h_f_to_fun_bijective: Function.Bijective f_to_fun := by
       constructor
       . intro a1 a2 ha12
-        unfold g at ha12
+        unfold f_to_fun at ha12
         simp at ha12
-        split_ifs at ha12 with h1 h2 h3
-        . aesop
-        . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-          rw [Subtype.val_inj] at ha12
-          unfold Fin.succAbove at ha12
-          simp at ha12
-          split_ifs at ha12 with h4
-          . simp at ha12
+        unfold f1 at ha12
+        replace ha12 : f a1 = f a2 := by
+          exact congrArg Equiv.toFun ha12
+        unfold f at ha12
+        have hny_cast : ∀ j : (Fin n).toSubtype, ny a1 (Fin.castSucc j) = ny a2 (Fin.castSucc j) := by
+          intro j
+          have hj := congrFun ha12 j
+          unfold Fin.predAbove  at hj
+          split_ifs at hj with h1 h2 h3
+          . simp at hj
+            rw [Subtype.val_inj] at hj
+            exact hj
+          . simp at hj
+            push_neg at h2
+            have hJ := h_not_equal_to_i a2 j
+            set A := (ny a1 (Fin.castSucc j))
+            set B := (ny a2 (Fin.castSucc j))
+            simp at hJ
+            rw [hj] at h1
+            have hB : B = (i:ℕ) := by omega
             omega
-          . simp at ha12
+          . simp at hj
+            push_neg at h1
+            have hJ := h_not_equal_to_i a1 j
+            set A := (ny a1 (Fin.castSucc j))
+            set B := (ny a2 (Fin.castSucc j))
+            simp at hJ
+            have hA : (i:ℕ) < A := by omega
+            have hB : (B:Object) = ((B:ℕ):Object) := by
+              simp
+            rw [hB] at hj
+            have hAZero : (0:ℕ) < A := by omega
+            rw [Object.natCast_inj] at hj
+            rw [← hj] at h3
             omega
-        . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-          rw [Subtype.val_inj] at ha12
-          unfold Fin.succAbove at ha12
-          simp at ha12
-          split_ifs at ha12 with h4
-          . simp at ha12
-            omega
-          . simp at ha12
-            omega
-        . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-          rw [Subtype.val_inj] at ha12
-          unfold Fin.succAbove at ha12
-          simp at ha12
-          split_ifs at ha12 with h4 h5 h6
-          . simp at ha12
-            rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-            rw [Subtype.val_inj] at ha12
-            have ha13 := (Permutations_bijective _).1 ha12
-            unfold Fin.castPred at ha13
-            simp at ha13
-            rw [Subtype.val_inj] at ha13
-            exact ha13
-          . simp at ha12
-            push_neg at h5
-            -- ha12 : ↑(Permutations_toFun x (Fin.castPred a1 ⋯)) = ↑(↑(Permutations_toFun x (Fin.castPred a2 ⋯)) + 1)h5 : ↑i ≤ ↑(Permutations_toFun x (Fin.castPred a2 ⋯))
-            change  (Permutations_toFun x (Fin.castPred a1 h1)) < (i:ℕ) at h4
-            change  (i:ℕ) ≤ (Permutations_toFun x (Fin.castPred a2 h3)) at h5
-            conv at ha12 =>
-              lhs
-              change ↑(Permutations_toFun x (Fin.castPred a1 h1))
-            conv at ha12 =>
-              rhs
-              lhs
-              change ↑(Permutations_toFun x (Fin.castPred a2 h3))
-            set A := (Permutations_toFun x (Fin.castPred a1 h1))
-            set B := (Permutations_toFun x (Fin.castPred a2 h3))
-            rw [ha12] at h4
-            omega
-          . simp at ha12
-            push_neg at h4
-            change  (i:ℕ) ≤ (Permutations_toFun x (Fin.castPred a1 h1)) at h4
-            change  (Permutations_toFun x (Fin.castPred a2 h3)) < (i:ℕ) at h6
-            conv at ha12 =>
-              lhs
-              lhs
-              change ↑(Permutations_toFun x (Fin.castPred a1 h1))
-            conv at ha12 =>
-              rhs
-              change ↑(Permutations_toFun x (Fin.castPred a2 h3))
-            set A := (Permutations_toFun x (Fin.castPred a1 h1))
-            set B := (Permutations_toFun x (Fin.castPred a2 h3))
-            rw [← ha12] at h6
-            omega
-          . simp at ha12
-            rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-            rw [Subtype.val_inj] at ha12
-            have ha13 := (Permutations_bijective _).1 ha12
-            unfold Fin.castPred at ha13
-            simp at ha13
-            rw [Subtype.val_inj] at ha13
-            exact ha13
-      . intro z
-        have hi := i.property
-        rw [mem_Fin] at hi
-        obtain ⟨mi, ⟨hmi1, hmi2⟩⟩ := hi
-        simp at hmi2
-        rw [← hmi2] at hmi1
-        have hz := z.property
-        rw [mem_Fin] at hz
-        obtain ⟨mz, ⟨hmz1, hmz2⟩⟩ := hz
-        simp at hmz2
-        rw [← hmz2] at hmz1
-        have hObjZ : z < (i:ℕ) ∨ z = (i:ℕ) ∨ z > (i:ℕ) := by omega
-        rcases hObjZ with hObjZ | hObjZ | hObjZ
-        . have h1 : z.val ∈ Fin n := by
-            rw [mem_Fin]
-            use z
-            constructor
-            . omega
-            . simp
-          have ⟨a, ha⟩ := (Permutations_bijective x).2 ⟨z, h1⟩
-          use Fin.castSucc a
-          unfold g
-          simp
-          rw [ha]
-          unfold Fin.succAbove
-          simp
-          simp [hObjZ]
-        . use (Fin.last n)
-          unfold g
-          simp
-          have h1 : (Fin.last n)  = n := by
-            unfold Fin.last
+          . simp at hj
+            push_neg at h1 h3
+            have ha1 := h_not_equal_to_i a1 j
+            have ha2 := h_not_equal_to_i a2 j
+            set A := (ny a1 (Fin.castSucc j))
+            set B := (ny a2 (Fin.castSucc j))
+            simp at ha1 ha2
+            have h1 :  (0:ℕ) < A := by omega
+            have h2 :  (0:ℕ) < B := by omega
             simp
-          simp [h1]
-          exact hObjZ.symm
-        . set w : ℕ := z - 1
-          have h1 : (w:Object) ∈ Fin n := by
-            rw [mem_Fin]
-            use w
-            constructor
-            . unfold w
+            omega
+        have hny : ny a1 = ny a2 := by
+          funext k
+          by_cases hk : (k = (Fin.last n))
+          . have ha1 := h_x_last_equal_i a1
+            have ha2 := h_x_last_equal_i a2
+            rw [← ha2] at ha1
+            rw [hk]
+            exact ha1
+          . have hk2 : k ≠ n := by
+              unfold Fin.last at hk
+              simp at hk
+              exact hk
+            set p := Fin.castPred k hk2
+            have sp : k = (Fin.castSucc p) := by
+              unfold p
+              simp
+            rw [sp]
+            exact hny_cast p
+        unfold ny at hny
+        unfold nx at hny
+        simp [Permutations_inj] at hny
+        rw [← Subtype.val_inj]
+        exact hny
+      . intro z
+        set g : Fin (n+1) → Fin (n+1) := fun x ↦ by
+          if h :   x ≠ n then
+            exact Fin.succAbove i ((Permutations_toFun z) (Fin.castPred x h))
+          else
+            exact i
+        have h_g_bijective : Function.Bijective g := by
+          constructor
+          . intro a1 a2 ha12
+            unfold g at ha12
+            simp at ha12
+            split_ifs at ha12 with h1 h2 h3
+            . aesop
+            . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+              rw [Subtype.val_inj] at ha12
+              unfold Fin.succAbove at ha12
+              simp at ha12
+              split_ifs at ha12 with h4
+              . simp at ha12
+                omega
+              . simp at ha12
+                omega
+            . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+              rw [Subtype.val_inj] at ha12
+              unfold Fin.succAbove at ha12
+              simp at ha12
+              split_ifs at ha12 with h4
+              . simp at ha12
+                omega
+              . simp at ha12
+                omega
+            . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+              rw [Subtype.val_inj] at ha12
+              unfold Fin.succAbove at ha12
+              simp at ha12
+              split_ifs at ha12 with h4 h5 h6
+              . simp at ha12
+                rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+                rw [Subtype.val_inj] at ha12
+                have ha13 := (Permutations_bijective _).1 ha12
+                unfold Fin.castPred at ha13
+                simp at ha13
+                rw [Subtype.val_inj] at ha13
+                exact ha13
+              . simp at ha12
+                push_neg at h5
+                change  (Permutations_toFun z (Fin.castPred a1 h1)) < (i:ℕ) at h4
+                change  (i:ℕ) ≤ (Permutations_toFun z (Fin.castPred a2 h3)) at h5
+                conv at ha12 =>
+                  lhs
+                  change ↑(Permutations_toFun z (Fin.castPred a1 h1))
+                conv at ha12 =>
+                  rhs
+                  lhs
+                  change ↑(Permutations_toFun z (Fin.castPred a2 h3))
+                set A := (Permutations_toFun z (Fin.castPred a1 h1))
+                set B := (Permutations_toFun z (Fin.castPred a2 h3))
+                rw [ha12] at h4
+                omega
+              . simp at ha12
+                push_neg at h4
+                change  (i:ℕ) ≤ (Permutations_toFun z (Fin.castPred a1 h1)) at h4
+                change  (Permutations_toFun z (Fin.castPred a2 h3)) < (i:ℕ) at h6
+                conv at ha12 =>
+                  lhs
+                  lhs
+                  change ↑(Permutations_toFun z (Fin.castPred a1 h1))
+                conv at ha12 =>
+                  rhs
+                  change ↑(Permutations_toFun z (Fin.castPred a2 h3))
+                set A := (Permutations_toFun z (Fin.castPred a1 h1))
+                set B := (Permutations_toFun z (Fin.castPred a2 h3))
+                rw [← ha12] at h6
+                omega
+              . simp at ha12
+                rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+                rw [Subtype.val_inj] at ha12
+                have ha13 := (Permutations_bijective _).1 ha12
+                unfold Fin.castPred at ha13
+                simp at ha13
+                rw [Subtype.val_inj] at ha13
+                exact ha13
+          . intro uu
+            have hi := i.property
+            rw [mem_Fin] at hi
+            obtain ⟨mi, ⟨hmi1, hmi2⟩⟩ := hi
+            simp at hmi2
+            rw [← hmi2] at hmi1
+            have hz := uu.property
+            rw [mem_Fin] at hz
+            obtain ⟨mz, ⟨hmz1, hmz2⟩⟩ := hz
+            simp at hmz2
+            rw [← hmz2] at hmz1
+            have hObjZ : uu < (i:ℕ) ∨ uu = (i:ℕ) ∨ uu > (i:ℕ) := by omega
+            rcases hObjZ with hObjZ | hObjZ | hObjZ
+            . have h1 : uu.val ∈ Fin n := by
+                rw [mem_Fin]
+                use uu
+                constructor
+                . omega
+                . simp
+              have ⟨a, ha⟩ := (Permutations_bijective z).2 ⟨uu, h1⟩
+              use Fin.castSucc a
+              unfold g
+              simp
+              rw [ha]
+              unfold Fin.succAbove
+              simp
+              simp [hObjZ]
+            . use (Fin.last n)
+              unfold g
+              simp
+              have h1 : (Fin.last n)  = n := by
+                unfold Fin.last
+                simp
+              simp [h1]
+              exact hObjZ.symm
+            . set w : ℕ := uu - 1
+              have h1 : w < n := by omega
+              have h1' : (w:Object) ∈ Fin n := by
+                rw [mem_Fin]
+                use w
+              have ⟨a, ha⟩ := (Permutations_bijective z).2 ⟨w, h1'⟩
+              use Fin.castSucc a
+              unfold g
+              simp
+              rw [ha]
+              unfold Fin.succAbove
+              have h2 : w ≥ i := by omega
+              have h3 : (⟨↑w, h1'⟩:Fin n) = w := by
+                rw [← Object.natCast_inj, Fin.coe_toNat]
+              simp [h3]
+              have h4 : ¬ w < i := by omega
+              simp [h4]
+              unfold w
               omega
-            . simp
-          have ⟨a, ha⟩ := (Permutations_bijective x).2 ⟨w, h1⟩
-          use Fin.castSucc a
+        set g_obj := (function_to_object _ _ g)
+        have hobj : g_obj ∈ (Fin (n + 1)) ^ (Fin (n + 1)) := by
+          simp
+          use g
+          rfl
+        have simpa_hg :
+            pow_fun_equiv
+                ⟨g_obj, hobj⟩
+              = g := by
+          exact (pow_fun_equiv' (Fin (n + 1)) (Fin (n + 1))).apply_symm_apply g
+        have h_g_in_permutation_n_1: g_obj ∈ Permutations (n+1) := by
+              simp only [Permutations]
+              simp only [specification_axiom'']
+              simp only [powerset_axiom]
+              have h1 :  ∃ (f : (Fin (n + 1)).toSubtype → (Fin (n + 1)).toSubtype), ↑f = (function_to_object (Fin (n + 1)) (Fin (n + 1))) g := by
+                use g
+                rfl
+              use h1
+              constructor
+              . intro a1 a2 ha12
+                rw [simpa_hg] at ha12
+                exact h_g_bijective.1 ha12
+              . intro uu
+                have ⟨a, ha⟩ := h_g_bijective.2 uu
+                use a
+                rw [simpa_hg]
+                exact ha
+        have h_g_n_is_i : g (Fin.last n) = i := by
           unfold g
           simp
-          rw [ha]
-          unfold Fin.succAbove
-          have h2 : w ≥ i := by omega
-          have h3 : (⟨↑w, h1⟩:Fin n) = w := by
-            rw [← Object.natCast_inj, Fin.coe_toNat]
-          simp [h3]
-          have h4 : ¬ w < i := by omega
-          simp [h4]
-          unfold w
-          omega
+          unfold Fin.last
+          simp
+        have h_g_is_in_S_i :=  hx_inv h_g_in_permutation_n_1  h_g_n_is_i
+        sorry
 
-    set g1 : Permutations n → Permutations (n+1) :=
-    have equiv : S i ≃ Permutations n := {
-      toFun := f_to_fun
-      invFun := sorry
-      left_inv := sorry
-      right_inv := sorry
-    }
+
+    have equiv : S i ≃ Permutations n := sorry
     use equiv, equiv.injective, equiv.surjective
 
   -- Hint: you might find `card_iUnion_card_disjoint` and `Permutations_finite` useful.
@@ -3758,3 +3877,169 @@ end Chapter3
 --     have h6 := hn h4 h5
 --     unfold Z at h6
 --     have h7 := card_add h6 ⟨y, by aesop⟩
+
+
+
+    -- -- noncomputable def SetTheory.Set.Fin.succAbove {n} (i : Fin (n + 1)) (x : Fin n) : Fin (n + 1) :=
+
+    -- set g : Permutations n → (Fin (n+1) → Fin (n+1)) := fun x ↦ (fun j ↦ by
+    --   if h1 : j ≠ n then
+    --     set m :=  ((Permutations_toFun x) (Fin.castPred j h1))
+    --     exact Fin.succAbove i m
+    --   else
+    --     exact i
+    -- )
+    -- have h_g_bijective (x:Permutations n) : Function.Bijective (g x) := by
+    --   constructor
+    --   . intro a1 a2 ha12
+    --     unfold g at ha12
+    --     simp at ha12
+    --     split_ifs at ha12 with h1 h2 h3
+    --     . aesop
+    --     . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+    --       rw [Subtype.val_inj] at ha12
+    --       unfold Fin.succAbove at ha12
+    --       simp at ha12
+    --       split_ifs at ha12 with h4
+    --       . simp at ha12
+    --         omega
+    --       . simp at ha12
+    --         omega
+    --     . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+    --       rw [Subtype.val_inj] at ha12
+    --       unfold Fin.succAbove at ha12
+    --       simp at ha12
+    --       split_ifs at ha12 with h4
+    --       . simp at ha12
+    --         omega
+    --       . simp at ha12
+    --         omega
+    --     . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+    --       rw [Subtype.val_inj] at ha12
+    --       unfold Fin.succAbove at ha12
+    --       simp at ha12
+    --       split_ifs at ha12 with h4 h5 h6
+    --       . simp at ha12
+    --         rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+    --         rw [Subtype.val_inj] at ha12
+    --         have ha13 := (Permutations_bijective _).1 ha12
+    --         unfold Fin.castPred at ha13
+    --         simp at ha13
+    --         rw [Subtype.val_inj] at ha13
+    --         exact ha13
+    --       . simp at ha12
+    --         push_neg at h5
+    --         -- ha12 : ↑(Permutations_toFun x (Fin.castPred a1 ⋯)) = ↑(↑(Permutations_toFun x (Fin.castPred a2 ⋯)) + 1)h5 : ↑i ≤ ↑(Permutations_toFun x (Fin.castPred a2 ⋯))
+    --         change  (Permutations_toFun x (Fin.castPred a1 h1)) < (i:ℕ) at h4
+    --         change  (i:ℕ) ≤ (Permutations_toFun x (Fin.castPred a2 h3)) at h5
+    --         conv at ha12 =>
+    --           lhs
+    --           change ↑(Permutations_toFun x (Fin.castPred a1 h1))
+    --         conv at ha12 =>
+    --           rhs
+    --           lhs
+    --           change ↑(Permutations_toFun x (Fin.castPred a2 h3))
+    --         set A := (Permutations_toFun x (Fin.castPred a1 h1))
+    --         set B := (Permutations_toFun x (Fin.castPred a2 h3))
+    --         rw [ha12] at h4
+    --         omega
+    --       . simp at ha12
+    --         push_neg at h4
+    --         change  (i:ℕ) ≤ (Permutations_toFun x (Fin.castPred a1 h1)) at h4
+    --         change  (Permutations_toFun x (Fin.castPred a2 h3)) < (i:ℕ) at h6
+    --         conv at ha12 =>
+    --           lhs
+    --           lhs
+    --           change ↑(Permutations_toFun x (Fin.castPred a1 h1))
+    --         conv at ha12 =>
+    --           rhs
+    --           change ↑(Permutations_toFun x (Fin.castPred a2 h3))
+    --         set A := (Permutations_toFun x (Fin.castPred a1 h1))
+    --         set B := (Permutations_toFun x (Fin.castPred a2 h3))
+    --         rw [← ha12] at h6
+    --         omega
+    --       . simp at ha12
+    --         rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
+    --         rw [Subtype.val_inj] at ha12
+    --         have ha13 := (Permutations_bijective _).1 ha12
+    --         unfold Fin.castPred at ha13
+    --         simp at ha13
+    --         rw [Subtype.val_inj] at ha13
+    --         exact ha13
+    --   . intro z
+    --     have hi := i.property
+    --     rw [mem_Fin] at hi
+    --     obtain ⟨mi, ⟨hmi1, hmi2⟩⟩ := hi
+    --     simp at hmi2
+    --     rw [← hmi2] at hmi1
+    --     have hz := z.property
+    --     rw [mem_Fin] at hz
+    --     obtain ⟨mz, ⟨hmz1, hmz2⟩⟩ := hz
+    --     simp at hmz2
+    --     rw [← hmz2] at hmz1
+    --     have hObjZ : z < (i:ℕ) ∨ z = (i:ℕ) ∨ z > (i:ℕ) := by omega
+    --     rcases hObjZ with hObjZ | hObjZ | hObjZ
+    --     . have h1 : z.val ∈ Fin n := by
+    --         rw [mem_Fin]
+    --         use z
+    --         constructor
+    --         . omega
+    --         . simp
+    --       have ⟨a, ha⟩ := (Permutations_bijective x).2 ⟨z, h1⟩
+    --       use Fin.castSucc a
+    --       unfold g
+    --       simp
+    --       rw [ha]
+    --       unfold Fin.succAbove
+    --       simp
+    --       simp [hObjZ]
+    --     . use (Fin.last n)
+    --       unfold g
+    --       simp
+    --       have h1 : (Fin.last n)  = n := by
+    --         unfold Fin.last
+    --         simp
+    --       simp [h1]
+    --       exact hObjZ.symm
+    --     . set w : ℕ := z - 1
+    --       have h1 : (w:Object) ∈ Fin n := by
+    --         rw [mem_Fin]
+    --         use w
+    --         constructor
+    --         . unfold w
+    --           omega
+    --         . simp
+    --       have ⟨a, ha⟩ := (Permutations_bijective x).2 ⟨w, h1⟩
+    --       use Fin.castSucc a
+    --       unfold g
+    --       simp
+    --       rw [ha]
+    --       unfold Fin.succAbove
+    --       have h2 : w ≥ i := by omega
+    --       have h3 : (⟨↑w, h1⟩:Fin n) = w := by
+    --         rw [← Object.natCast_inj, Fin.coe_toNat]
+    --       simp [h3]
+    --       have h4 : ¬ w < i := by omega
+    --       simp [h4]
+    --       unfold w
+    --       omega
+
+    -- set g1 : Permutations n → (Fin (n+1) ≃ Fin (n+1)) := fun x ↦ Equiv.ofBijective (g x) (h_g_bijective x)
+    -- set g2 : Permutations n → Permutations (n+1) := fun x ↦ perm_equiv_equiv.symm (g1 x)
+    -- have hg2 {x:Permutations n}: (g2 x).val ∈ (S i) := by
+    --   unfold S
+    --   rw [specification_axiom'']
+    --   have h1 := (g2 x).property
+    --   use h1
+    --   simp
+    --   unfold g2
+    --   simp
+    --   unfold g1
+    --   simp
+    --   unfold g
+    --   simp
+    --   have h2 : ↑(Fin.last n) = n := by
+    --     unfold Fin.last
+    --     simp
+    --   simp [h2]
+    -- set g_inv_fun : Permutations n → (S i) := fun x ↦ ⟨g2 x, hg2⟩
