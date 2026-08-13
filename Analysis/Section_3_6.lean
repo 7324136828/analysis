@@ -3941,19 +3941,69 @@ theorem SetTheory.Set.Permutations_ih (n: ℕ):
 
 /-- Exercise 3.6.12 (ii) -/
 theorem SetTheory.Set.Permutations_card (n: ℕ):
-    (Permutations n).card = n.factorial := by sorry
+    (Permutations n).card = n.factorial := by
+      induction' n with n hn
+      . simp
+        set f : (Fin 0) → (Fin 0) := fun x ↦ x
+        have h1 : (function_to_object _ _ f) ∈ (Permutations 0) := by
+          unfold Permutations
+          rw [specification_axiom'']
+          have h2 : (function_to_object _ _ f) ∈ (Fin 0) ^ (Fin 0) := by
+            rw [powerset_axiom]
+            use f
+            rfl
+          use h2
+          constructor
+          . intro a1
+            have ha1 := a1.property
+            simp [fin_zero_is_empty_set] at ha1
+          . intro a1
+            have ha1 := a1.property
+            simp [fin_zero_is_empty_set] at ha1
+        have h2 : (Permutations 0) ⊆ (Fin 0)^(Fin 0) := by
+          intro x hx
+          unfold Permutations at hx
+          rw [specification_axiom''] at hx
+          obtain ⟨ha, hb⟩ := hx
+          exact ha
+        have h3 : Fin 0 ^ Fin 0 = (∅)^(∅:Set) := by
+          simp [fin_zero_is_empty_set]
+        rw [h3] at h2
+        have h4 := card_pow_one (∅:Set)
+        have ⟨h5,h6⟩ := card_subset h4.1 h2
+        conv at h6 =>
+          rhs
+          rw [h4.2]
+        have h7 : (Permutations 0).card = 0 ∨ (Permutations 0).card = 1 := by omega
+        rcases h7 with h7 | h7
+        . have h8 := empty_iff_card_eq_zero.mpr (And.intro h5 h7)
+          rw [h8] at h1
+          have h9 := not_mem_empty ( (function_to_object (Fin 0) (Fin 0)) f)
+          contradiction
+        . exact h7
+      have h1 := Permutations_ih n
+      rw [h1]
+      rw [hn]
+      rfl
+
 
 /-- Connections with Mathlib's {name}`Finite` -/
 theorem SetTheory.Set.finite_iff_finite {X:Set} : X.finite ↔ Finite X := by
-  rw [finite_iff_exists_equiv_fin, finite]
+  rw [finite_iff_exists_equiv_fin]
+  rw [finite]
   constructor
   · rintro ⟨n, hn⟩
     use n
     obtain ⟨f, hf⟩ := hn
+    -- Fin n ≃ _root_.Fin n
+    -- X.toSubtype ≃  (Fin n).toSubtype
+    -- X.toSubtype ≃ _root_.Fin n
     have eq := (Equiv.ofBijective f hf).trans (Fin.Fin_equiv_Fin n)
     exact ⟨eq⟩
   rintro ⟨n, hn⟩
   use n
+  -- (X.toSubtype ≃ _root_.Fin n)
+  -- (Fin n ≃ _root_.Fin n).symm
   have eq := hn.some.trans (Fin.Fin_equiv_Fin n).symm
   exact ⟨eq, eq.bijective⟩
 
@@ -3967,7 +4017,8 @@ theorem SetTheory.Set.finite_iff_set_finite {X:Set} :
 theorem SetTheory.Set.card_eq_nat_card {X:Set} : X.card = Nat.card X := by
   by_cases hf : X.finite
   · by_cases hz : X.card = 0
-    · rw [hz]; symm
+    · rw [hz];
+      symm
       have : X = ∅ := empty_of_card_eq_zero hf hz
       rw [this, Nat.card_eq_zero, isEmpty_iff]
       aesop
@@ -3976,8 +4027,12 @@ theorem SetTheory.Set.card_eq_nat_card {X:Set} : X.card = Nat.card X := by
     obtain ⟨f, hf⟩ := hc
     apply Nat.card_eq_of_equiv_fin
     exact (Equiv.ofBijective f hf).trans (Fin.Fin_equiv_Fin X.card)
-  simp only [card, hf, ↓reduceDIte]; symm
-  rw [Nat.card_eq_zero, ←not_finite_iff_infinite]
+  simp only [card]
+  simp only [hf]
+  simp only [↓reduceDIte];
+  symm
+  rw [Nat.card_eq_zero]
+  rw [←not_finite_iff_infinite]
   right
   rwa [finite_iff_set_finite] at hf
 
@@ -3987,206 +4042,3 @@ theorem SetTheory.Set.card_eq_ncard {X:Set} : X.card = (X: _root_.Set Object).nc
   rfl
 
 end Chapter3
-
--- theorem SetTheory.Set.card_add_union {X Y:Set} (hX: X.finite) (hdisj: Disjoint X Y) {n:ℕ} (hY : Y.has_card n) : (X ∪ Y).has_card (X.card + n) := by
---   revert Y
---   induction' n with n hn
---   . intro Y h1 h2
---     simp
---     rw [has_card_zero] at h2
---     rw [h2]
---     simp
---     by_cases h : X.card = 0
---     . rw [h]
---       have h3 := empty_iff_card_eq_zero.mpr (And.intro hX h)
---       exact has_card_zero.mpr h3
---     . apply card_to_has_card
---       push_neg at h
---       exact h
---       . rfl
---   . intro Y h1 h2
---     have h3 := pos_card_nonempty (by aesop) h2
---     obtain ⟨y, hy⟩ := nonempty_def h3
---     have h4 :  Disjoint X (Y\({y}:Set)) := by
---       rw [disjoint_iff] at *
---       ext x
---       simp
---       intro h5 h6
---       have h7 : x ∈ X ∩ Y := by
---         simp
---         exact And.intro h5 h6
---       rw [h1] at h7
---       have h8 := not_mem_empty x
---       contradiction
---     have h5 := card_erase (by aesop) h2 ⟨y, hy⟩
---     change ((Y\({y}:Set))).has_card (n + 1 - 1) at h5
---     set Z := (Y\({y}:Set))
---     have h6 := hn h4 h5
---     unfold Z at h6
---     have h7 := card_add h6 ⟨y, by aesop⟩
-
-
-
-    -- -- noncomputable def SetTheory.Set.Fin.succAbove {n} (i : Fin (n + 1)) (x : Fin n) : Fin (n + 1) :=
-
-    -- set g : Permutations n → (Fin (n+1) → Fin (n+1)) := fun x ↦ (fun j ↦ by
-    --   if h1 : j ≠ n then
-    --     set m :=  ((Permutations_toFun x) (Fin.castPred j h1))
-    --     exact Fin.succAbove i m
-    --   else
-    --     exact i
-    -- )
-    -- have h_g_bijective (x:Permutations n) : Function.Bijective (g x) := by
-    --   constructor
-    --   . intro a1 a2 ha12
-    --     unfold g at ha12
-    --     simp at ha12
-    --     split_ifs at ha12 with h1 h2 h3
-    --     . aesop
-    --     . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-    --       rw [Subtype.val_inj] at ha12
-    --       unfold Fin.succAbove at ha12
-    --       simp at ha12
-    --       split_ifs at ha12 with h4
-    --       . simp at ha12
-    --         omega
-    --       . simp at ha12
-    --         omega
-    --     . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-    --       rw [Subtype.val_inj] at ha12
-    --       unfold Fin.succAbove at ha12
-    --       simp at ha12
-    --       split_ifs at ha12 with h4
-    --       . simp at ha12
-    --         omega
-    --       . simp at ha12
-    --         omega
-    --     . rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-    --       rw [Subtype.val_inj] at ha12
-    --       unfold Fin.succAbove at ha12
-    --       simp at ha12
-    --       split_ifs at ha12 with h4 h5 h6
-    --       . simp at ha12
-    --         rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-    --         rw [Subtype.val_inj] at ha12
-    --         have ha13 := (Permutations_bijective _).1 ha12
-    --         unfold Fin.castPred at ha13
-    --         simp at ha13
-    --         rw [Subtype.val_inj] at ha13
-    --         exact ha13
-    --       . simp at ha12
-    --         push_neg at h5
-    --         -- ha12 : ↑(Permutations_toFun x (Fin.castPred a1 ⋯)) = ↑(↑(Permutations_toFun x (Fin.castPred a2 ⋯)) + 1)h5 : ↑i ≤ ↑(Permutations_toFun x (Fin.castPred a2 ⋯))
-    --         change  (Permutations_toFun x (Fin.castPred a1 h1)) < (i:ℕ) at h4
-    --         change  (i:ℕ) ≤ (Permutations_toFun x (Fin.castPred a2 h3)) at h5
-    --         conv at ha12 =>
-    --           lhs
-    --           change ↑(Permutations_toFun x (Fin.castPred a1 h1))
-    --         conv at ha12 =>
-    --           rhs
-    --           lhs
-    --           change ↑(Permutations_toFun x (Fin.castPred a2 h3))
-    --         set A := (Permutations_toFun x (Fin.castPred a1 h1))
-    --         set B := (Permutations_toFun x (Fin.castPred a2 h3))
-    --         rw [ha12] at h4
-    --         omega
-    --       . simp at ha12
-    --         push_neg at h4
-    --         change  (i:ℕ) ≤ (Permutations_toFun x (Fin.castPred a1 h1)) at h4
-    --         change  (Permutations_toFun x (Fin.castPred a2 h3)) < (i:ℕ) at h6
-    --         conv at ha12 =>
-    --           lhs
-    --           lhs
-    --           change ↑(Permutations_toFun x (Fin.castPred a1 h1))
-    --         conv at ha12 =>
-    --           rhs
-    --           change ↑(Permutations_toFun x (Fin.castPred a2 h3))
-    --         set A := (Permutations_toFun x (Fin.castPred a1 h1))
-    --         set B := (Permutations_toFun x (Fin.castPred a2 h3))
-    --         rw [← ha12] at h6
-    --         omega
-    --       . simp at ha12
-    --         rw [← Object.natCast_inj, Fin.coe_toNat, Fin.coe_toNat] at ha12
-    --         rw [Subtype.val_inj] at ha12
-    --         have ha13 := (Permutations_bijective _).1 ha12
-    --         unfold Fin.castPred at ha13
-    --         simp at ha13
-    --         rw [Subtype.val_inj] at ha13
-    --         exact ha13
-    --   . intro z
-    --     have hi := i.property
-    --     rw [mem_Fin] at hi
-    --     obtain ⟨mi, ⟨hmi1, hmi2⟩⟩ := hi
-    --     simp at hmi2
-    --     rw [← hmi2] at hmi1
-    --     have hz := z.property
-    --     rw [mem_Fin] at hz
-    --     obtain ⟨mz, ⟨hmz1, hmz2⟩⟩ := hz
-    --     simp at hmz2
-    --     rw [← hmz2] at hmz1
-    --     have hObjZ : z < (i:ℕ) ∨ z = (i:ℕ) ∨ z > (i:ℕ) := by omega
-    --     rcases hObjZ with hObjZ | hObjZ | hObjZ
-    --     . have h1 : z.val ∈ Fin n := by
-    --         rw [mem_Fin]
-    --         use z
-    --         constructor
-    --         . omega
-    --         . simp
-    --       have ⟨a, ha⟩ := (Permutations_bijective x).2 ⟨z, h1⟩
-    --       use Fin.castSucc a
-    --       unfold g
-    --       simp
-    --       rw [ha]
-    --       unfold Fin.succAbove
-    --       simp
-    --       simp [hObjZ]
-    --     . use (Fin.last n)
-    --       unfold g
-    --       simp
-    --       have h1 : (Fin.last n)  = n := by
-    --         unfold Fin.last
-    --         simp
-    --       simp [h1]
-    --       exact hObjZ.symm
-    --     . set w : ℕ := z - 1
-    --       have h1 : (w:Object) ∈ Fin n := by
-    --         rw [mem_Fin]
-    --         use w
-    --         constructor
-    --         . unfold w
-    --           omega
-    --         . simp
-    --       have ⟨a, ha⟩ := (Permutations_bijective x).2 ⟨w, h1⟩
-    --       use Fin.castSucc a
-    --       unfold g
-    --       simp
-    --       rw [ha]
-    --       unfold Fin.succAbove
-    --       have h2 : w ≥ i := by omega
-    --       have h3 : (⟨↑w, h1⟩:Fin n) = w := by
-    --         rw [← Object.natCast_inj, Fin.coe_toNat]
-    --       simp [h3]
-    --       have h4 : ¬ w < i := by omega
-    --       simp [h4]
-    --       unfold w
-    --       omega
-
-    -- set g1 : Permutations n → (Fin (n+1) ≃ Fin (n+1)) := fun x ↦ Equiv.ofBijective (g x) (h_g_bijective x)
-    -- set g2 : Permutations n → Permutations (n+1) := fun x ↦ perm_equiv_equiv.symm (g1 x)
-    -- have hg2 {x:Permutations n}: (g2 x).val ∈ (S i) := by
-    --   unfold S
-    --   rw [specification_axiom'']
-    --   have h1 := (g2 x).property
-    --   use h1
-    --   simp
-    --   unfold g2
-    --   simp
-    --   unfold g1
-    --   simp
-    --   unfold g
-    --   simp
-    --   have h2 : ↑(Fin.last n) = n := by
-    --     unfold Fin.last
-    --     simp
-    --   simp [h2]
-    -- set g_inv_fun : Permutations n → (S i) := fun x ↦ ⟨g2 x, hg2⟩
