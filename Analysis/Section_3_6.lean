@@ -3783,14 +3783,161 @@ theorem SetTheory.Set.Permutations_ih (n: ℕ):
           unfold Fin.last
           simp
         have h_g_is_in_S_i :=  hx_inv h_g_in_permutation_n_1  h_g_n_is_i
-        sorry
-
-
-    have equiv : S i ≃ Permutations n := sorry
+        use ⟨g_obj, h_g_is_in_S_i⟩
+        apply (Permutations_inj _ _).mp
+        ext zx
+        unfold f_to_fun
+        unfold f1
+        have h_simp : (Permutations_toFun (perm_equiv_equiv.symm (f1 ⟨g_obj, h_g_is_in_S_i⟩))) = (f ⟨g_obj, h_g_is_in_S_i⟩) := by
+          funext nx
+          unfold Permutations_toFun
+          generalize_proofs pf1
+          have hpf1 := pf1.choose_spec
+          simp at hpf1
+          have h_simp_1 : (perm_equiv_equiv (perm_equiv_equiv.symm (f1 ⟨g_obj, h_g_is_in_S_i⟩))) = (function_to_object _ _ (f ⟨g_obj, h_g_is_in_S_i⟩)) := by
+            simp
+            unfold f1
+            unfold Equiv.ofBijective
+            simp
+            rfl
+          have h_simp_2 := (coe_of_fun_inj _ _).mp h_simp_1
+          have hp : (perm_equiv_equiv.symm (f1 ⟨g_obj, h_g_is_in_S_i⟩)) = function_to_object (Fin n) (Fin n) (Permutations_toFun (perm_equiv_equiv.symm (f1 ⟨g_obj, h_g_is_in_S_i⟩))) := by
+            unfold Permutations_toFun
+            simp
+            generalize_proofs pf2
+            have hpf2 := pf2.choose_spec
+            simp at hpf2
+            conv =>
+              lhs
+              rw [← hpf2]
+            rfl
+          have h_simp_3 : (perm_equiv_equiv.symm (f1 ⟨g_obj, h_g_is_in_S_i⟩)) = (function_to_object _ _ (f ⟨g_obj, h_g_is_in_S_i⟩)) := by
+              have h_obj := congrArg (function_to_object (Fin n) (Fin n)) h_simp_2
+              rw [hp]
+              exact h_obj
+          conv at hpf1 =>
+            rhs
+            rw [h_simp_3]
+          have hpf2 := (coe_of_fun_inj _ _).mp hpf1
+          rw [hpf2]
+        rw [h_simp]
+        unfold f
+        unfold Fin.predAbove
+        have h_simp_perm : (Permutations_toFun (nx ⟨g_obj, h_g_is_in_S_i⟩)) =  g := by
+          unfold Permutations_toFun
+          simp
+          generalize_proofs pf3
+          have hpf3 := pf3.choose_spec
+          have h2 : (nx ⟨g_obj, h_g_is_in_S_i⟩) = (function_to_object _ _ g) := by
+            unfold nx
+            unfold g_obj
+            rfl
+          conv at hpf3 =>
+            rhs
+            rw [h2]
+          exact (coe_of_fun_inj _ _).mp hpf3
+        split_ifs with h1
+        . unfold ny at h1
+          conv at h1 =>
+            lhs
+            rw [h_simp_perm]
+          unfold g at h1
+          simp
+          unfold ny
+          rw [h_simp_perm]
+          unfold g
+          split_ifs with h2
+          . unfold Fin.succAbove
+            simp
+            simp [h2] at h1
+            unfold Fin.succAbove at h1
+            split_ifs with h3
+            . simp
+            . simp
+              simp [h3] at h1
+              push_neg at h3
+              omega
+          . simp [h2] at h1
+        . unfold ny at h1
+          push_neg at h1
+          conv at h1 =>
+            rhs
+            rw [h_simp_perm]
+          unfold g at h1
+          simp
+          unfold ny
+          rw [h_simp_perm]
+          unfold g
+          split_ifs with h2
+          . unfold Fin.succAbove
+            simp
+            simp [h2] at h1
+            unfold Fin.succAbove at h1
+            split_ifs with h3
+            . simp
+              simp [h3] at h1
+              omega
+            . simp
+          . push_neg at h2
+            simp [h2] at h1
+            unfold Fin.castSucc at h2
+            simp at h2
+            have h3 := zx.property
+            rw [mem_Fin] at h3
+            obtain ⟨m, ⟨hm1,hm2⟩⟩ := h3
+            simp [h2] at hm2
+            omega
+    have equiv : S i ≃ Permutations n := Equiv.ofBijective f_to_fun h_f_to_fun_bijective
     use equiv, equiv.injective, equiv.surjective
-
   -- Hint: you might find `card_iUnion_card_disjoint` and `Permutations_finite` useful.
-  sorry
+  have h_equiv : Permutations (n+1) = (Fin (n+1)).iUnion S := by
+    ext x
+    constructor <;> intro h
+    . rw [mem_iUnion]
+      use ((Permutations_toFun ⟨x,h⟩) (Fin.last n))
+      unfold S
+      simp
+      use h
+      rfl
+    . rw [mem_iUnion] at h
+      obtain ⟨a, ha⟩ := h
+      unfold S at ha
+      rw [specification_axiom''] at ha
+      obtain ⟨b, hb⟩ := ha
+      exact b
+  have hSc : ∀ i, (S i).has_card (Permutations n).card := by
+    intro i
+    have h1 := hSe i
+    have h2 := Permutations_finite n
+    unfold finite at h2
+    obtain ⟨n1, hn1⟩ := h2
+    have h3 := (EquivCard_to_has_card_eq h1).mpr hn1
+    have h4 : (Permutations n).card = n1  := by
+      unfold card
+      simp [Permutations_finite n]
+      generalize_proofs pf1
+      have hpf1 := pf1.choose_spec
+      exact card_uniq hpf1 hn1
+    rw [h4]
+    exact h3
+  have hSd : Pairwise fun i j => Disjoint (S i) (S j) := by
+    intro a1 a2 ha12
+    rw [disjoint_iff]
+    ext x
+    refine ⟨?_, by aesop⟩
+    intro h
+    simp at h
+    obtain ⟨h1, h2⟩ := h
+    unfold S at h1 h2
+    rw [specification_axiom''] at h1 h2
+    obtain ⟨hx1, hy1⟩ := h1
+    obtain ⟨hx2, hy2⟩ := h2
+    change  (perm_equiv_equiv ⟨x, hx1⟩) (Fin.last n) = a2 at hy2
+    rw [hy1] at hy2
+    contradiction
+  have hSf := (card_iUnion_card_disjoint hSc hSd).2
+  rw [← h_equiv] at hSf
+  exact hSf
 
 /-- Exercise 3.6.12 (ii) -/
 theorem SetTheory.Set.Permutations_card (n: ℕ):
