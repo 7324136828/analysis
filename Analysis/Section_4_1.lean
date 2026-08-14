@@ -40,12 +40,18 @@ structure PreInt where
 instance PreInt.instSetoid : Setoid PreInt where
   r a b := a.minuend + b.subtrahend = b.minuend + a.subtrahend
   iseqv := {
-    refl := by sorry
-    symm := by sorry
+    refl := by
+      intro x
+      rfl
+    symm := by
+      intro x y hxy
+      exact hxy.symm
     trans := by
       -- This proof is written to follow the structure of the original text.
-      intro ⟨ a,b ⟩ ⟨ c,d ⟩ ⟨ e,f ⟩ h1 h2; simp_all
-      have h3 := congrArg₂ (· + ·) h1 h2; simp at h3
+      intro ⟨ a,b ⟩ ⟨ c,d ⟩ ⟨ e,f ⟩ h1 h2;
+      simp_all
+      have h3 := congrArg₂ (· + ·) h1 h2;
+      simp at h3
       have : (a + f) + (c + d) = (e + b) + (c + d) := calc
         (a + f) + (c + d) = a + d + (c + f) := by abel
         _ = c + b + (e + d) := h3
@@ -147,11 +153,23 @@ example : 3 = 3 —— 0 := rfl
 example : 3 = 4 —— 1 := by rw [Int.ofNat_eq, Int.eq]
 
 /-- (Not from textbook) 0 is the only natural whose cast is 0 -/
-lemma Int.cast_eq_0_iff_eq_0 (n : ℕ) : (n : Int) = 0 ↔ n = 0 := by sorry
+lemma Int.cast_eq_0_iff_eq_0 (n : ℕ) : (n : Int) = 0 ↔ n = 0 := by
+  refine ⟨?_, by aesop⟩
+  intro h
+  exact (natCast_inj n 0).mp h
 
 /-- Definition 4.1.4 (Negation of integers) / Exercise 4.1.2 -/
 instance Int.instNeg : Neg Int where
-  neg := Quotient.lift (fun ⟨ a, b ⟩ ↦ b —— a) (by sorry)
+  neg := Quotient.lift (fun ⟨ a, b ⟩ ↦ b —— a) (by
+    rintro ⟨a1, a2⟩ ⟨b1, b2⟩ hab
+    simp
+    simp at hab
+    apply (Int.eq _ _ _ _).mpr
+    calc
+      _  =  b1 + a2 := by abel
+      _  =  a1 + b2 := hab.symm
+      _  =  b2 + a1 := by abel
+  )
 
 theorem Int.neg_eq (a b:ℕ) : -(a —— b) = b —— a := rfl
 
