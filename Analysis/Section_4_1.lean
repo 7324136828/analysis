@@ -856,16 +856,126 @@ theorem Int.sq_nonneg' (n:Int) : ∃ (m:Nat), n*n = m := by
 -/
 abbrev Int.equivInt : Int ≃ ℤ where
   toFun := Quotient.lift (fun ⟨ a, b ⟩ ↦ a - b) (by
-    sorry)
-  invFun := sorry
-  left_inv n := sorry
-  right_inv n := sorry
+    intro ⟨a1, a2⟩ ⟨b1, b2⟩ hab
+    simp at *
+    omega
+  )
+  invFun := fun x ↦ by
+    if x ≥ 0 then
+     exact ((x.natAbs) —— 0)
+    else
+      exact (0 —— (x.natAbs))
+  left_inv n := by
+    obtain ⟨ a1, a2, rfl ⟩ := eq_diff n
+    simp
+    unfold Int.natAbs
+    by_cases h: a2 ≤ a1
+    . simp [h]
+      set a := (a1:ℤ) - (a2:ℤ)
+      set b := a1 - a2
+      have ha : a = b := by
+        unfold a b
+        rw [Int.ofNat_sub h]
+      simp [ha]
+      unfold b
+      rw [eq]
+      simp [h]
+    . simp [h]
+      push_neg at h
+      have h1 :  a1 ≤ a2 - 1 := by omega
+      set a := (a1:ℤ) - (a2:ℤ)
+      set b := a2 - 1 - a1
+      have ha : a = Int.negSucc b := by
+        unfold a b
+        omega
+      simp [ha]
+      unfold b
+      rw [eq]
+      simp
+      have hx1 : a2 - 1 - a1 + 1 = a2 - a1 := by
+        grind
+      rw [hx1]
+      have hx2 : a1 + (a2 - a1) = a2 := by
+        grind
+      rw [hx2]
+  right_inv n := by
+    by_cases h : n ≥ 0
+    . simp [h]
+    . simp [h]
+      grind
 
 /-- Not in textbook: equivalence preserves order and ring operations -/
 abbrev Int.equivInt_ordered_ring : Int ≃+*o ℤ where
   toEquiv := equivInt
-  map_add' := by sorry
-  map_mul' := by sorry
-  map_le_map_iff' := by sorry
+  map_add' := by
+    intro x y
+    simp
+    obtain ⟨ x1, x2, rfl ⟩ := eq_diff x
+    obtain ⟨ y1, y2, rfl ⟩ := eq_diff y
+    simp
+    set z := x1 —— x2 + y1 —— y2
+    have hz : z = (x1 + y1 ) —— (x2 + y2) := by
+      unfold z
+      simp_rw [add_eq]
+    rw [hz]
+    simp
+    grind
+  map_mul' := by
+    intro x y
+    simp
+    obtain ⟨ x1, x2, rfl ⟩ := eq_diff x
+    obtain ⟨ y1, y2, rfl ⟩ := eq_diff y
+    simp
+    set z := x1 —— x2 * y1 —— y2
+    have hz : z = (x1 * y1 + x2 * y2) —— (x1 * y2 + x2 * y1) := by
+      unfold z
+      simp_rw [mul_eq]
+    rw [hz]
+    simp
+    grind
+  map_le_map_iff' := by
+    intro x y
+    simp
+    obtain ⟨ x1, x2, rfl ⟩ := eq_diff x
+    obtain ⟨ y1, y2, rfl ⟩ := eq_diff y
+    simp
+    rw [le_iff]
+    -- simp only [le_iff_exists_add] at *
+    constructor
+    . intro h
+      simp at h
+      set a : ℤ := (x1 : ℤ)
+      set b : ℤ := (y1 : ℤ) - (y2 : ℤ) + (x2 : ℤ)
+
+      have hnonneg : 0 ≤ b - a := by
+        omega
+      have hab : b = a + (b - a) := by
+        omega
+
+      have h' : ∃ n : ℕ, b = a + n := by
+        use (b-a).natAbs
+        unfold Int.natAbs
+        cases hba : b - a with
+        | ofNat m =>
+            simpa [hba] using hab
+        | negSucc m =>
+            simp [hba] at hnonneg
+
+      obtain ⟨n, hn⟩ := h'
+      use n
+      change  y1 —— y2 = x1 —— x2 + (n —— 0)
+      rw [add_eq]
+      rw [eq]
+      simp
+      unfold a b at hn
+      grind
+    . rintro ⟨t, ht⟩
+      set a : ℤ := (x1 : ℤ)
+      set b : ℤ := (y1 : ℤ) - (y2 : ℤ) + (x2 : ℤ)
+      change  y1 —— y2 = x1 —— x2 + (t —— 0) at ht
+      rw [add_eq] at ht
+      rw [eq] at ht
+      simp at ht
+      grind
 
 end Section_4_1
