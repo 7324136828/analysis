@@ -53,7 +53,9 @@ theorem abs_of_zero : abs 0 = 0 := rfl
   Henceforth we use the Mathlib absolute value.
 -/
 theorem abs_eq_abs (x: ℚ) : abs x = |x| := by
-  sorry
+  unfold abs
+  split_ifs with h1 h2
+  all_goals grind
 
 abbrev dist (x y : ℚ) := |x - y|
 
