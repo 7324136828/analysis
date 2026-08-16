@@ -1260,6 +1260,7 @@ theorem Rat.mul_lt_mul_right_of_neg (x y z:Rat) (hxy: x < y) (hz: z.isNeg) : x *
   exact h2
 
 
+
 theorem Rat.quotient {b: ℤ}(a : ℤ) (hB : b ≠ 0): (Quotient.lift (fun ⟨ a, b, h ⟩ ↦ (a:ℚ) / (b:ℚ)) (by
     rintro ⟨a1, a2, ha12⟩ ⟨b1, b2, hb12⟩ hab
     simp_all
@@ -1305,21 +1306,311 @@ abbrev Rat.equivRat : Rat ≃ ℚ where
 
 
 -- obtain ⟨num, den, den_nz, co_prime⟩ := n
+theorem Rat.positive_eq_diff (n:Rat) : ∃ a b, b > 0 ∧ n = a // b := by
+  obtain ⟨ a1, a2, ha1, rfl ⟩ := eq_diff n
+  have h1 := Int.lt_trichotomy a2 0
+  rcases h1 with h1 | h1 | h1
+  . use (-a1)
+    use (-a2)
+    constructor
+    . simp
+      exact h1
+    . rw [eq]
+      simp
+      all_goals aesop
+  . contradiction
+  . use a1
+    use a2
+
+theorem Rat.gt_zero_is_positive (a:Rat):  a > 0 ↔ a.isPos := by
+  have h1 := gt_iff a 0
+  have h2 : a - 0 = a := by simp
+  rw [h2] at h1
+  exact h1
+
+theorem Rat.zero_lt_is_positive (a:Rat):  0 < a ↔ a.isPos := by
+  have h1 := gt_zero_is_positive a
+  simp at h1
+  exact h1
+
+theorem Rat.div_cancellation_right {a : Rat} (ha : a ≠ 0):  (a)*(a)⁻¹ = 1 := by
+  change (a)*(a)⁻¹ = 1 // 1
+  obtain ⟨ a1, a2, ha1, rfl ⟩ := positive_eq_diff a
+  rw [inv_eq, mul_eq, eq]
+  simp_all
+  rw [mul_comm]
+  . intro hab
+    have hax : a1 = 0 := by
+      nlinarith
+    rw [hax] at ha
+    have hax2 : a2 ≠ 0 := by omega
+    have h1 := simplify_div 0 hax2
+    rw [h1] at ha
+    have h2 : (0:Rat) / (a2:Rat) = (0:Rat) :=  by
+      change (0 // 1) / (a2 // 1) = 0 // 1
+      rw [div_eq, inv_eq, mul_eq, eq]
+      simp
+      all_goals aesop
+    rw [← h2] at ha
+    contradiction
+  . omega
+  . omega
+  . intro hab
+    have hax : a1 = 0 := by
+      nlinarith
+    rw [hax] at ha
+    have hax2 : a2 ≠ 0 := by omega
+    have h1 := simplify_div 0 hax2
+    rw [h1] at ha
+    have h2 : (0:Rat) / (a2:Rat) = (0:Rat) :=  by
+      change (0 // 1) / (a2 // 1) = 0 // 1
+      rw [div_eq, inv_eq, mul_eq, eq]
+      simp
+      all_goals aesop
+    rw [← h2] at ha
+    contradiction
+  . omega
+
+
+
+
+theorem Rat.zero_is_not_positive: ¬ (0:Rat).isPos := by
+  intro h
+  have h1 := not_zero_and_pos 0
+  have h2 : 0 = (0:Rat) := rfl
+  have h3 := And.intro h2 h
+  contradiction
+
+
+theorem Rat.positive_inverse {z:Rat} (hz: z.isPos) : (z⁻¹).isPos := by
+  obtain ⟨a1, a2, ⟨hmn1, hmn2, hmn3⟩⟩ := hz
+  use a2
+  use a1
+  constructor
+  . exact hmn2
+  . constructor
+    . exact hmn1
+    . rw [hmn3]
+      have ha1 : a1 ≠ 0 := by omega
+      have ha2 : a2 ≠ 0 := by omega
+      have h_1 := simplify_div a1 ha2
+      have h_2 := simplify_div a2 ha1
+      rw [← h_1]
+      rw [← h_2]
+      rw [inv_eq]
+      aesop
+
+
+theorem Rat.mul_lt_mul_right_le {z:Rat} (x y : Rat)(hz: z.isPos) : x ≤ y ↔ x * z ≤ y * z := by
+  constructor <;> intro h
+  . rcases h with h | h
+    . have h1 := mul_lt_mul_right h hz
+      left;
+      exact h1
+    . rw [h]
+  . have h1 : z ≠ 0 := by
+      intro hz2
+      rw [hz2] at hz
+      have h3 := zero_is_not_positive
+      contradiction
+    . have hz_inv := positive_inverse hz
+      rcases h with h | h
+      . have h2 := mul_lt_mul_right h hz_inv
+        rw [mul_assoc, mul_assoc] at h2
+        have h3 := div_cancellation_right h1
+        rw [h3] at h2
+        simp at h2
+        left;
+        exact h2
+      . replace h := congr($h * (z⁻¹))
+        rw [mul_assoc, mul_assoc] at h
+        have h3 := div_cancellation_right h1
+        rw [h3] at h
+        simp at h
+        right
+        exact h
+
+
+
+theorem Rat.div_le_div_iff {a b c d : ℤ} (hb : 0 < b) (hd : 0 < d) : (a:Rat) / (b:Rat) ≤ (c:Rat) / (d:Rat) ↔ a * d ≤ c * b := by
+  have hnb : (0 : Rat) < (b : Rat) := by
+      exact_mod_cast hb
+  have hnd : (0 : Rat) < (d : Rat) := by
+    exact_mod_cast hd
+  have h_pos_b := (zero_lt_is_positive b).mp hnb
+  have h_pos_d := (zero_lt_is_positive d).mp hnd
+  constructor <;> intro h
+  . have h_mul_1 := (mul_lt_mul_right_le ((a:Rat) / (b:Rat)) ((c:Rat) / (d:Rat)) h_pos_b).mp h
+    have h_mul_2 := (mul_lt_mul_right_le (((a:Rat) / (b:Rat)) * (b:Rat)) (((c:Rat) / (d:Rat)) * (b:Rat)) h_pos_d).mp h_mul_1
+    simp at h_mul_2
+    have h1 : ((a:Rat) / (b:Rat)) * (b:Rat) * (d:Rat) = (a:Rat) * (d : Rat) := by
+      change ((a // 1) / (b // 1)) * (b//1) * (d//1) = (a//1) * (d//1)
+      rw [div_eq, inv_eq, mul_eq, mul_eq, mul_eq, mul_eq,eq]
+      ring
+      all_goals aesop
+    have h2 : ((c:Rat) / (d:Rat)) * (b:Rat) * (d:Rat) = (c:Rat) * (b : Rat) := by
+      change (c // 1) / (d // 1) * (b // 1) * (d//1) = (c//1) * (b//1)
+      rw [div_eq, inv_eq, mul_eq, mul_eq, mul_eq, mul_eq,eq]
+      ring
+      aesop
+      aesop
+      aesop
+      omega
+      aesop
+      omega
+      simp
+      omega
+      omega
+      omega
+      omega
+      omega
+    rw [h1, h2] at h_mul_2
+    exact_mod_cast h_mul_2
+  . have h_mod :  (a:Rat) * (d:Rat) ≤ (c:Rat) * (b:Rat) := by
+      exact_mod_cast h
+    have h_b_inv := positive_inverse h_pos_b
+    have h_d_inv := positive_inverse h_pos_d
+    have h_b_not_zero : b ≠ 0 := by omega
+    have h_d_not_zero : d ≠ 0 := by omega
+    have h_simp_a_b := simplify_div a h_b_not_zero
+    have h_simp_c_d := simplify_div c h_d_not_zero
+    rw [← h_simp_a_b, ← h_simp_c_d]
+    have h_mul_1 := (mul_lt_mul_right_le _ _ h_b_inv).mp h_mod
+    have h_mul_2 := (mul_lt_mul_right_le _ _ h_d_inv).mp h_mul_1
+    have h_left :  ↑a * ↑d * (↑b)⁻¹ * (↑d)⁻¹ = a // b := by
+      change (a // 1) * (d // 1) * (b // 1)⁻¹ * (d // 1)⁻¹ = a // b
+      rw [inv_eq, inv_eq, mul_eq, mul_eq, mul_eq, eq]
+      ring
+      aesop
+      all_goals omega
+    have h_right :  ↑c * ↑b * (↑b)⁻¹ * (↑d)⁻¹ = c // d := by
+      change (c // 1) * (b // 1) * (b // 1)⁻¹ * (d // 1)⁻¹ = c // d
+      rw [inv_eq, inv_eq, mul_eq, mul_eq, mul_eq, eq]
+      ring
+      simp
+      omega
+      omega
+      all_goals omega
+    rw [h_left, h_right] at h_mul_2
+    exact h_mul_2
+
 
 
 /-- Not in textbook: equivalence preserves order -/
 abbrev Rat.equivRat_order : Rat ≃o ℚ where
   toEquiv := equivRat
-  map_rel_iff' := by sorry
-
-
+  map_rel_iff' := by
+    intro a b
+    constructor <;> intro h
+    . simp at h
+      obtain ⟨ a1, a2, ha1, rfl ⟩ := positive_eq_diff a
+      obtain ⟨ b1, b2, hb1, rfl ⟩ := positive_eq_diff b
+      have hane0 : a2 ≠ 0 := by omega
+      have hbne0 : b2 ≠ 0 := by omega
+      have h1 := Rat.quotient a1 hane0
+      have h2 := Rat.quotient b1 hbne0
+      simp [h1, h2] at h
+      have h_ind : a1 * b2 ≤ b1 * a2  := by
+        have ha2 : (0 : ℚ) < (a2 : ℚ) := by
+          exact_mod_cast ha1
+        have hb2 : (0 : ℚ) < (b2 : ℚ) := by
+          exact_mod_cast hb1
+        have h' : (a1 : ℚ) * (b2 : ℚ) ≤ (b1 : ℚ) * (a2 : ℚ) := by
+          exact (div_le_div_iff₀ ha2 hb2).mp h
+        exact_mod_cast h'
+      have h1 := simplify_div a1 hane0
+      have h2 := simplify_div b1 hbne0
+      simp [h1, h2]
+      have h4 : a2 * b2 ≥ 0 := by
+        nlinarith
+      have h5 : b1 * a2 = a2 * b1 := by rw [mul_comm]
+      rw [h5] at h_ind
+      exact div_less_than_iff a1 b1 hane0 hbne0 h4 h_ind
+    . simp
+      obtain ⟨ a1, a2, ha1, rfl ⟩ := positive_eq_diff a
+      obtain ⟨ b1, b2, hb1, rfl ⟩ := positive_eq_diff b
+      have hane0 : a2 ≠ 0 := by omega
+      have hbne0 : b2 ≠ 0 := by omega
+      have h1 := Rat.quotient a1 hane0
+      have h2 := Rat.quotient b1 hbne0
+      rw [h1, h2]
+      clear h1 h2
+      have hxa2 : 0 < a2 := by omega
+      have hxb2 : 0 < b2 := by omega
+      have h_simp_left := simplify_div a1 hane0
+      have h_simp_right := simplify_div b1 hbne0
+      rw [h_simp_left, h_simp_right] at h
+      have hxxx := (div_le_div_iff hxa2 hxb2).mp h
+      have ha2 : (0 : ℚ) < (a2 : ℚ) := by
+          exact_mod_cast ha1
+      have hb2 : (0 : ℚ) < (b2 : ℚ) := by
+          exact_mod_cast hb1
+      have hab2 : ((a1: ℚ) * (b2: ℚ) ≤ (b1: ℚ) * (a2: ℚ)) := by
+          exact_mod_cast hxxx
+      have h3 := (div_le_div_iff₀ ha2 hb2).mpr hab2
+      exact h3
 
 
 /-- Not in textbook: equivalence preserves ring operations -/
 abbrev Rat.equivRat_ring : Rat ≃+* ℚ where
   toEquiv := equivRat
-  map_add' := by sorry
-  map_mul' := by sorry
+  map_add' := by
+    simp_all
+    intro x y
+    obtain ⟨ a1, a2, ha1, rfl ⟩ := positive_eq_diff x
+    obtain ⟨ b1, b2, hb1, rfl ⟩ := positive_eq_diff y
+    have hane0 : a2 ≠ 0 := by omega
+    have hbne0 : b2 ≠ 0 := by omega
+    have h1 := Rat.quotient a1 hane0
+    have h2 := Rat.quotient b1 hbne0
+    rw [h1, h2]
+    have hwne0 : a2 * b2 ≠ 0 := by simp; omega;
+    have h3 : (a1 // a2 + b1 // b2) = (a1 * b2 + b1 * a2) // (a2 * b2) := by
+      rw [add_eq, eq]
+      ring
+      .simp
+       omega
+      . simp
+        omega
+      . omega
+      . omega
+    rw [h3]
+    have h4 := Rat.quotient (a1 * b2 + b1 * a2)  hwne0
+    rw [h4]
+    simp_all
+    have ha2 : (a2 : ℚ) ≠ 0 := by
+      exact_mod_cast (ne_of_gt ha1)
+    have hb2 : (b2 : ℚ) ≠ 0 := by
+      exact_mod_cast (ne_of_gt hb1)
+    field_simp [ha2, hb2]
+
+
+  map_mul' := by
+    simp_all
+    intro x y
+    obtain ⟨ a1, a2, ha1, rfl ⟩ := positive_eq_diff x
+    obtain ⟨ b1, b2, hb1, rfl ⟩ := positive_eq_diff y
+    have hane0 : a2 ≠ 0 := by omega
+    have hbne0 : b2 ≠ 0 := by omega
+    have h1 := Rat.quotient a1 hane0
+    have h2 := Rat.quotient b1 hbne0
+    rw [h1, h2]
+    have hwne0 : a2 * b2 ≠ 0 := by simp; omega;
+    have h3 : (a1 // a2 * b1 // b2) = (a1 * b1) // (a2 * b2) := by
+      rw [mul_eq, eq]
+      omega
+      omega
+      omega
+      omega
+    rw [h3]
+    have h4 := Rat.quotient (a1 * b1)  hwne0
+    rw [h4]
+    simp_all
+    have ha2 : (a2 : ℚ) ≠ 0 := by
+      exact_mod_cast (ne_of_gt ha1)
+    have hb2 : (b2 : ℚ) ≠ 0 := by
+      exact_mod_cast (ne_of_gt hb1)
+    field_simp [ha2, hb2]
 
 /--
   (Not from textbook) The textbook rationals are isomorphic (as a field) to the Mathlib rationals.
