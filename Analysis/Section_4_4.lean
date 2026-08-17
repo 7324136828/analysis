@@ -24,12 +24,104 @@ Users of the companion who have completed the exercises in this section are welc
 
 -/
 
+theorem Rat.pre_between_int(x:ℚ) : ↑((x.num / (x.den:ℤ))) ≤ x ∧ x < ↑((x.num / (x.den:ℤ))) + 1 := by
+    constructor
+    . have h1 : 1 = 1 := rfl
+      have h2 := (Rat.num_div_den x).symm
+      conv =>
+        rhs
+        rw [h2]
+      have hden : (x.den : ℤ) ≠ 0 := by
+        exact_mod_cast x.den_nz
+
+      have h1 : x.num / (x.den : ℤ) * (x.den : ℤ) ≤ x.num := by
+        simpa [mul_comm] using (Int.mul_ediv_self_le (x := x.num) (k := (x.den : ℤ)) hden)
+
+      have h2 : ((x.num / (x.den : ℤ) : ℤ) : ℚ) * (x.den : ℚ) ≤ (x.num : ℚ) := by
+        exact_mod_cast h1
+
+      have hden_pos : (0 : ℚ) < (x.den : ℚ) := by
+        exact_mod_cast Nat.pos_of_ne_zero x.den_nz
+
+      exact (le_div_iff₀ hden_pos).2 h2
+    . have h2 := (Rat.num_div_den x).symm
+      conv =>
+        lhs
+        rw [h2]
+      have hden : (x.den : ℤ) ≠ 0 := by
+        exact_mod_cast x.den_nz
+
+      have hden_pos : 0 < x.den := by
+        omega
+
+      have hden_pos_int : 0 < (x.den: ℤ) := by
+        exact_mod_cast hden_pos
+
+      have hden_pos_rat : (0 : ℚ) < (x.den : ℚ) := by
+        exact_mod_cast hden_pos_int
+
+      have h3 := Int.mul_ediv_self_le (x := x.num) (k := (x.den : ℤ)) hden
+      have h4 := Int.lt_mul_ediv_self_add (x := x.num) (k := (x.den : ℤ)) hden_pos_int
+      set q : ℤ := x.num / (x.den : ℤ)
+      have h1 : x.num < (q + 1) * (x.den : ℤ) := by
+        dsimp [q]
+        grind
+      have h2 : (x.num : ℚ) < ((q : ℚ) + 1) * (x.den : ℚ) := by
+        exact_mod_cast h1
+      exact (div_lt_iff₀ hden_pos_rat).2 h2
+
+
 /-- Proposition 4.4.1 (Interspersing of integers by rationals) / Exercise 4.4.1 -/
 theorem Rat.between_int (x:ℚ) : ∃! n:ℤ, n ≤ x ∧ x < n+1 := by
-  sorry
+  apply ExistsUnique.intro (x.num / x.den)
+  . exact pre_between_int x
+  . intro y hy
+    have ⟨ha1, ha2⟩ := pre_between_int x
+    set a := (x.num / x.den)
+    have h1 := lt_trichotomy y a
+    rcases h1 with h1 | h1 | h1
+    . have h_0 : 1 = 1 := by rfl
+      have hy1 : y + 1 ≤ a := by omega
+      have hy2 : ↑(y + 1) ≤ (a:ℚ) := by
+        exact_mod_cast hy1
+      have hy3 : ↑(y + 1) = (y:ℚ) + 1 := by
+        grind
+      have hy4 : ↑(y + 1) ≤ x := by grind
+      rw [hy3] at hy4
+      have hy5 := hy.2
+      linarith
+    . simp_all
+    . have h_0 : 1 = 1 := by rfl
+      have hy1 : y ≥ a + 1 := by omega
+      have hy2 : (y:ℚ) ≥ ↑(a + 1) := by
+        exact_mod_cast hy1
+      have hy3 : ↑(a + 1) = (a:ℚ) + 1 := by
+        grind
+      have hy4 : (y:ℚ) > x := by grind
+      have hy5 := hy.1
+      linarith
+
+
+
 
 theorem Nat.exists_gt (x:ℚ) : ∃ n:ℕ, n > x := by
-  sorry
+  have h1 := Rat.between_int x
+  obtain ⟨a, ⟨⟨ha11, ha12⟩, ha2⟩⟩ := h1
+  by_cases h : a ≥ -1
+  . use (a+1).toNat
+    have h1: (a+1) ≥ 0 := by omega
+    have h2 := Int.toNat_of_nonneg h1
+    have h3 : (((a + 1).toNat : ℕ) : ℚ) = ((a + 1 : ℤ) : ℚ) := by
+      exact_mod_cast Int.toNat_of_nonneg h1
+    rw [h3]
+    simp_all
+  . use 0
+    push_neg at h
+    have h1 : a + 1 < 0 := by omega
+    have h2 : ↑(a + 1) < (0 : ℚ) := by exact_mod_cast h1
+    simp at h2
+    grind
+
 
 /-- Proposition 4.4.3 (Interspersing of rationals) -/
 theorem Rat.exists_between_rat {x y:ℚ} (h: x < y) : ∃ z:ℚ, x < z ∧ z < y := by
