@@ -138,44 +138,116 @@ theorem Rat.exists_between_rat {x y:ℚ} (h: x < y) : ∃ z:ℚ, x < z ∧ z < y
 
 /-- Exercise 4.4.2 (a) -/
 theorem Nat.no_infinite_descent : ¬ ∃ a:ℕ → ℕ, ∀ n, a (n+1) < a n := by
-  sorry
+  intro h
+  obtain ⟨a, ha⟩ := h
+  set b := a 0
+  have hb :  ∀ (m : ℕ), a m ≤ b - m := by
+    intro m
+    induction' m with m hm
+    . omega
+    . have h1 := ha m
+      omega
+  have hc := hb (b+1)
+  have hd := hb b
+  simp at hc hd
+  rw [← hd] at hc
+  have hw := ha b
+  omega
 
 /-- Exercise 4.4.2 (b) -/
 def Int.infinite_descent : Decidable (∃ a:ℕ → ℤ, ∀ n, a (n+1) < a n) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`.
-  sorry
+  apply isTrue
+  set a:ℕ → ℤ := fun x ↦ -(x:ℤ)
+  use a
+  intro n
+  unfold a
+  omega
 
 /-- Exercise 4.4.2 (b) -/
+theorem Rat.pos_inv {x y:ℚ} (hx : x > 0) (hxy: x < y) : y⁻¹ < x⁻¹ := by
+  simp_all
+  by_contra h
+  push_neg at h
+  have h1 : x⁻¹ > 0 := by
+    simp_all
+  have h2 : x⁻¹ < y⁻¹ ∨ (x⁻¹ = y⁻¹) := by grind
+  have hxx : x⁻¹ * x = 1 := by grind
+  have hyy : y⁻¹ * y = 1 := by grind
+  rcases h2 with h2 | h2
+  . have h_0 : 1 = 1 := rfl
+    have h3 := mul_lt_mul_of_nonneg h2 hxy (by grind) (by grind)
+    simp at h3
+    simp [hxx, hyy] at h3
+  . simp at h2
+    rw [h2] at hxy
+    grind
+
+
 def Rat.pos_infinite_descent : Decidable (∃ a:ℕ → {x: ℚ // 0 < x}, ∀ n, a (n+1) < a n) := by
   -- the first line of this construction should be either `apply isTrue` or `apply isFalse`.
-  sorry
+  apply isTrue
+  have ha {x: ℕ}: 0 < (1:ℚ)/((x:ℚ)+1) := by
+    simp_all
+    grind
+  set a:ℕ → {x: ℚ // 0 < x} := fun x ↦ ⟨(1:ℚ)/((x:ℚ)+1), ha⟩
+  use a
+  intro n
+  unfold a
+  simp_all
+  have h1 : ((n:ℚ)+1) < ((n:ℚ)+1 + 1) := by aesop
+  have h2 : 0 < ((n:ℚ)+1) := by
+    grind
+  have h3 := pos_inv h2 h1
+  exact h3
 
 #check even_iff_exists_two_mul
 #check odd_iff_exists_bit1
 
 theorem Nat.even_or_odd'' (n:ℕ) : Even n ∨ Odd n := by
-  sorry
+  induction' n with n hn
+  . simp_all
+  . rcases hn with hn | hn
+    . unfold Even at hn
+      right;
+      unfold Odd
+      obtain ⟨r, hr⟩ := hn
+      use r
+      grind
+    . unfold Odd at hn
+      left;
+      unfold Even
+      obtain ⟨r, hr⟩ := hn
+      use (r+1)
+      grind
 
 theorem Nat.not_even_and_odd (n:ℕ) : ¬ (Even n ∧ Odd n) := by
-  sorry
+  rintro ⟨⟨r, hr⟩, ⟨k, hk⟩⟩
+  rw [hr] at hk
+  grind
 
 #check Nat.rec
 
 /-- Proposition 4.4.4 / Exercise 4.4.3  -/
 theorem Rat.not_exist_sqrt_two : ¬ ∃ x:ℚ, x^2 = 2 := by
   -- This proof is written to follow the structure of the original text.
-  by_contra h; choose x hx using h
+  by_contra h;
+  choose x hx using h
   have hnon : x ≠ 0 := by aesop
   wlog hpos : x > 0
-  . apply this _ _ _ (show -x>0 by simp; order) <;> grind
+  . apply this _ _ _ (show -x>0 by simp; order) <;>
+    grind
   have hrep : ∃ p q:ℕ, p > 0 ∧ q > 0 ∧ p^2 = 2*q^2 := by
     use x.num.toNat, x.den
     observe hnum_pos : x.num > 0
     observe hden_pos : x.den > 0
     refine ⟨ by simp [hpos], hden_pos, ?_ ⟩
-    rw [←num_div_den x] at hx; field_simp at hx
+    rw [←num_div_den x] at hx;
+    field_simp at hx
     have hnum_cast : x.num = x.num.toNat := Int.eq_natCast_toNat.mpr (by positivity)
-    rw [hnum_cast] at hx; norm_cast at hx; grind
+    rw [hnum_cast] at hx;
+    norm_cast at hx;
+    grind
   set P : ℕ → Prop := fun p ↦ p > 0 ∧ ∃ q > 0, p^2 = 2*q^2
   have hP : ∃ p, P p := by aesop
   have hiter (p:ℕ) (hPp: P p) : ∃ q, q < p ∧ P q := by
@@ -185,10 +257,17 @@ theorem Rat.not_exist_sqrt_two : ¬ ∃ x:ℚ, x^2 = 2 := by
       choose q hpos hq using hPp.2
       have : q^2 = 2 * k^2 := by linarith
       use q; constructor
-      . sorry
+      . by_contra hqne
+        push_neg at hqne
+        have hq2 : 4 * k ^2 ≤ q^2 := by nlinarith
+        have hq3 : 2 * k ^ 2 < 4 * k ^2 := by nlinarith
+        grind
       exact ⟨ hpos, k, by linarith [hPp.1], this ⟩
     have h1 : Odd (p^2) := by
-      sorry
+      unfold Odd at hp ⊢
+      obtain ⟨r, hr⟩ := hp
+      use (2 * r^2 + 2 * r)
+      grind
     have h2 : Even (p^2) := by
       choose q hpos hq using hPp.2
       rw [even_iff_exists_two_mul]
@@ -198,7 +277,8 @@ theorem Rat.not_exist_sqrt_two : ¬ ∃ x:ℚ, x^2 = 2 := by
   classical
   set f : ℕ → ℕ := fun p ↦ if hPp: P p then (hiter p hPp).choose else 0
   have hf (p:ℕ) (hPp: P p) : (f p < p) ∧ P (f p) := by
-    simp [f, hPp]; exact (hiter p hPp).choose_spec
+    simp [f, hPp];
+    exact (hiter p hPp).choose_spec
   choose p hP using hP
   set a : ℕ → ℕ := Nat.rec p (fun n p ↦ f p)
   have ha (n:ℕ) : P (a n) := by
@@ -218,11 +298,18 @@ theorem Rat.exist_approx_sqrt_two {ε:ℚ} (hε:ε>0) : ∃ x ≥ (0:ℚ), x^2 <
   have (n:ℕ): (n*ε)^2 < 2 := by
     induction' n with n hn; simp
     simp [add_mul]
-    apply lt_of_le_of_ne (h (n*ε) (by positivity) hn)
+    have h2 := h (n*ε) (by positivity) hn
+    have h1 := lt_of_le_of_ne h2
+    apply h1
     have := not_exist_sqrt_two
     aesop
   choose n hn using Nat.exists_gt (2/ε)
-  rw [gt_iff_lt, div_lt_iff₀', mul_comm, ←sq_lt_sq₀] at hn <;> try positivity
+  simp at hn
+  rw [div_lt_iff₀'] at hn
+  rw [mul_comm] at hn
+  rw [←sq_lt_sq₀] at hn
+  <;>
+  try positivity
   grind
 
 /-- Example 4.4.6 -/
