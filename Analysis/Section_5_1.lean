@@ -578,7 +578,26 @@ lemma Sequence.isBounded_def (a:Sequence) : a.IsBounded ↔ ∃ M ≥ 0, a.Bound
 example : BoundedBy ![1,-2,3,-4] 4 := by intro i; fin_cases i <;> norm_num
 
 /-- Example 5.1.13 -/
-example : ¬((fun n:ℕ ↦ (-1)^n * (n+1:ℚ)):Sequence).IsBounded := by sorry
+example : ¬((fun n:ℕ ↦ (-1)^n * (n+1:ℚ)):Sequence).IsBounded := by
+  rintro ⟨m, ⟨hm1, hm2⟩⟩
+  unfold Sequence.BoundedBy at hm2
+  have ⟨n, hn⟩ := Section_4_4.Nat.exists_gt m
+  have hm3 := hm2 (n+1)
+  set f : ℕ → ℚ := fun n ↦ (-1) ^ n * ((n:ℚ) + 1)
+  have h1 : (Sequence.ofNatFun f).seq (n+1) = (-1)^(n+1) * (n+2) := by
+    unfold f
+    simp_all
+    have h2 : 0 ≤ n + 1 := by omega
+    have h3 : (0 : ℤ) ≤ (n  : ℤ) + 1 := by
+      exact_mod_cast h2
+    simp [h3]
+    linarith
+  rw [h1] at hm3
+  simp at hm3
+  have h5 : ↑n + 2 ≤ m := by grind
+  have h6 : ↑n + 2 > ↑n  := by grind
+  grind
+
 
 /-- Example 5.1.13 -/
 example : ((fun n:ℕ ↦ (-1:ℚ)^n):Sequence).IsBounded := by
