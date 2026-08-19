@@ -344,25 +344,36 @@ lemma Sequence.IsCauchy.coe (a:ℕ → ℚ) :
     Section_4_3.dist (a j) (a k) ≤ ε := by
   constructor <;> intro h ε hε
   · choose N hN h' using h ε hε
-    lift N to ℕ using hN; use N
-    intro j _ k _; simp [Rat.steady_def] at h'; specialize h' j _ k _ <;> try omega
-    simp_all; exact h'
+    lift N to ℕ using hN;
+    use N
+    intro j _ k _;
+    simp [Rat.steady_def] at h';
+    specialize h' j _ k _
+    <;> try omega
+    simp_all;
+    exact h'
   choose N h' using h ε hε
   refine ⟨ max N 0, by simp, ?_ ⟩
-  intro n hn m hm; simp at hn hm
+  intro n hn m hm;
+  simp at hn hm
   have npos : 0 ≤ n := ?_
   have mpos : 0 ≤ m := ?_
   lift n to ℕ using npos
   lift m to ℕ using mpos
-  simp [hn, hm]; specialize h' n _ m _
+  simp [hn, hm];
+  specialize h' n _ m _
   all_goals try omega
   norm_cast
 
 lemma Sequence.IsCauchy.mk {n₀:ℤ} (a: {n // n ≥ n₀} → ℚ) :
     (mk' n₀ a).IsCauchy ↔ ∀ ε > (0:ℚ), ∃ N ≥ n₀, ∀ j ≥ N, ∀ k ≥ N,
     Section_4_3.dist (mk' n₀ a j) (mk' n₀ a k) ≤ ε := by
-  constructor <;> intro h ε hε <;> choose N hN h' using h ε hε
-  · refine ⟨ N, hN, ?_ ⟩; dsimp at hN; intro j _ k _
+  constructor
+      <;> intro h ε hε
+      <;> choose N hN h' using h ε hε
+  · refine ⟨ N, hN, ?_ ⟩;
+    dsimp at hN;
+    intro j _ k _
     simp only [Rat.Steady, show max n₀ N = N by omega] at h'
     specialize h' j _ k _ <;> try omega
     simp_all [show n₀ ≤ j by omega, show n₀ ≤ k by omega]
@@ -385,16 +396,98 @@ theorem Sequence.ex_5_1_10_a : (1:ℚ).Steady sqrt_two := by
   unfold sqrt_two at hn hm
   simp at hn hm
   simp [hn, hm]
-  sorry
+  have hs : (1 : ℝ) ≤ √2 := by
+    nlinarith [Real.sq_sqrt (show (0:ℝ) ≤ 2 by norm_num), Real.sqrt_nonneg 2]
+  have hfloor : ∀(z:ℤ), (10 : ℤ) ^ z.toNat ≤ ⌊√2 * 10 ^ z.toNat⌋ := by
+    intro n
+    rw [Int.le_floor]
+    push_cast
+    exact le_mul_of_one_le_left (by positivity) hs
+  have ht : √2 ≤ 2 := by
+    nlinarith [Real.sq_sqrt (show (0:ℝ) ≤ 2 by norm_num), Real.sqrt_nonneg 2]
+  have hceil : ∀(z:ℤ), ⌊√2 * 10 ^ z.toNat⌋ ≤ 2 * (10 : ℤ) ^ z.toNat  := by
+    intro n
+    have h : (⌊√2 * 10 ^ n.toNat⌋ : ℝ) ≤ 2 * 10 ^ n.toNat :=
+      calc (⌊√2 * 10 ^ n.toNat⌋ : ℝ)
+          ≤ √2 * 10 ^ n.toNat := Int.floor_le _
+        _ ≤ 2 * 10 ^ n.toNat := by exact mul_le_mul_of_nonneg_right ht (by positivity)
+    exact_mod_cast h
 
+  have h1 : ∀(z:ℤ), (⌊√2 * 10 ^ z.toNat⌋:ℚ) / 10 ^ z.toNat ≥ 1 := by
+    intro n
+    simp
+    rw [le_div_iff₀ (by positivity)]
+    simp
+    exact_mod_cast hfloor n
+  have h2 : ∀(z:ℤ), (⌊√2 * 10 ^ z.toNat⌋:ℚ) / 10 ^ z.toNat ≤ 2 := by
+    intro n
+    rw [div_le_iff₀ (by positivity)]
+    exact_mod_cast hceil n
 
+  wlog h : m ≤ n
+  . have h_0 : 1 = 1 := rfl
+    simp_all
+    have hw := this m n hm hn
+    rw [abs_sub_comm]
+    apply hw
+    grind
+
+  have hlft : (⌊√2 * 10 ^ n.toNat⌋:ℚ) / 10 ^ n.toNat * 10 ^ m.toNat = (⌊√2 * 10 ^ n.toNat⌋:ℚ) * 10 ^ m.toNat / 10 ^ n.toNat := by
+    grind
+  have hmn : m.toNat ≤ n.toNat := by omega
+  have key : ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ (n.toNat - m.toNat)
+    ≤ ⌊√2 * 10 ^ n.toNat⌋ := by
+      rw [Int.le_floor]
+      push_cast
+      calc (⌊√2 * 10 ^ m.toNat⌋ : ℝ) * 10 ^ (n.toNat - m.toNat)
+          ≤ √2 * 10 ^ m.toNat * 10 ^ (n.toNat - m.toNat) := mul_le_mul_of_nonneg_right (Int.floor_le _) (by positivity)
+        _ = √2 * 10 ^ n.toNat := by rw [mul_assoc, ← pow_add, Nat.add_sub_cancel' hmn]
+
+  have hZ : ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ n.toNat ≤ ⌊√2 * 10 ^ n.toNat⌋ * 10 ^ m.toNat := by
+    calc ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ n.toNat
+      = ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ (n.toNat - m.toNat) * 10 ^ m.toNat := by rw [mul_assoc, ← pow_add, Nat.sub_add_cancel hmn]
+       _ ≤ ⌊√2 * 10 ^ n.toNat⌋ * 10 ^ m.toNat := mul_le_mul_of_nonneg_right key (by positivity)
+
+  have h3 :  (⌊√2 * 10 ^ m.toNat⌋:ℚ) / 10 ^ m.toNat ≤ (⌊√2 * 10 ^ n.toNat⌋:ℚ) / 10 ^ n.toNat := by
+    rw [div_le_iff₀ (by positivity)]
+    rw [hlft]
+    rw [le_div_iff₀ (by positivity)]
+    exact_mod_cast hZ
+
+  rw [abs_of_nonneg (by linarith)]
+  grind
 
 /--
   Example 5.1.10. (This requires extensive familiarity with Mathlib's API for the real numbers.)
 -/
-theorem Sequence.ex_5_1_10_b : (0.1:ℚ).Steady (sqrt_two.from 1) := by sorry
+theorem Sequence.ex_5_1_10_b : (0.1:ℚ).Steady (sqrt_two.from 1) := by
+  unfold Rat.Steady
+  intro n hn m hm
+  simp_all [Rat.Close]
+  unfold sqrt_two
+  simp_all
+  unfold sqrt_two at hn hm
+  simp at hn hm
+  obtain ⟨hn0, hn1⟩ := hn
+  obtain ⟨hm0, hm1⟩ := hm
+  lift n to ℕ using hn0
+  lift m to ℕ using hm0
+  simp_all
 
-theorem Sequence.ex_5_1_10_c : (0.1:ℚ).EventuallySteady sqrt_two := by sorry
+  have h1 : ∀(n:ℕ), n ≥ 1 ∧ (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≥ 1.4 := by
+    -- we can use the fact that (⌊√2 * 10 ^ n⌋:ℚ) / 10 is monotonically increasing
+    sorry
+  have h2 : ∀(n:ℤ), n ≥ 1 ∧ (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≤ 1.5 := by
+    sorry
+  sorry
+
+
+theorem Sequence.ex_5_1_10_c : (0.1:ℚ).EventuallySteady sqrt_two := by
+  use 1
+  constructor
+  . unfold sqrt_two
+    simp_all
+  . exact ex_5_1_10_b
 
 /-- Proposition 5.1.11. The harmonic sequence, defined as a₁ = 1, a₂ = 1/2, ... is a Cauchy sequence. -/
 theorem Sequence.IsCauchy.harmonic : (mk' 1 (fun n ↦ (1:ℚ)/n)).IsCauchy := by
