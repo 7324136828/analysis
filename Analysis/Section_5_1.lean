@@ -477,7 +477,7 @@ theorem Sequence.ex_5_1_10_b : (0.1:ℚ).Steady (sqrt_two.from 1) := by
   have h1 : ∀(n:ℕ), n ≥ 1 ∧ (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≥ 1.4 := by
     -- we can use the fact that (⌊√2 * 10 ^ n⌋:ℚ) / 10 is monotonically increasing
     sorry
-  have h2 : ∀(n:ℤ), n ≥ 1 ∧ (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≤ 1.5 := by
+  have h2 : ∀(n:ℕ), (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≤ 1.5 := by
     sorry
   sorry
 
