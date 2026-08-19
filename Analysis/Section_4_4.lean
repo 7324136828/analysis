@@ -23,6 +23,7 @@ Users of the companion who have completed the exercises in this section are welc
 - (Add tip here)
 
 -/
+namespace Section_4_4
 
 theorem Rat.pre_between_int(x:ℚ) : ↑((x.num / (x.den:ℤ))) ≤ x ∧ x < ↑((x.num / (x.den:ℤ))) + 1 := by
     constructor
@@ -122,6 +123,7 @@ theorem Nat.exists_gt (x:ℚ) : ∃ n:ℕ, n > x := by
     simp at h2
     grind
 
+end Section_4_4
 
 /-- Proposition 4.4.3 (Interspersing of rationals) -/
 theorem Rat.exists_between_rat {x y:ℚ} (h: x < y) : ∃ z:ℚ, x < z ∧ z < y := by
@@ -303,7 +305,7 @@ theorem Rat.exist_approx_sqrt_two {ε:ℚ} (hε:ε>0) : ∃ x ≥ (0:ℚ), x^2 <
     apply h1
     have := not_exist_sqrt_two
     aesop
-  choose n hn using Nat.exists_gt (2/ε)
+  choose n hn using Section_4_4.Nat.exists_gt (2/ε)
   simp at hn
   rw [div_lt_iff₀'] at hn
   rw [mul_comm] at hn
@@ -311,6 +313,7 @@ theorem Rat.exist_approx_sqrt_two {ε:ℚ} (hε:ε>0) : ∃ x ≥ (0:ℚ), x^2 <
   <;>
   try positivity
   grind
+  omega
 
 /-- Example 4.4.6 -/
 example :
