@@ -384,6 +384,42 @@ lemma Sequence.IsCauchy.mk {n₀:ℤ} (a: {n // n ≥ n₀} → ℚ) :
 
 noncomputable def Sequence.sqrt_two : Sequence := (fun n:ℕ ↦ ((⌊ (Real.sqrt 2)*10^n ⌋ / 10^n):ℚ))
 
+theorem monotonicity_of_sqrt_two_sequence {n m :ℕ} (hnm: m ≤ n) : (⌊√2 * 10 ^ m⌋:ℚ) / 10 ^ m ≤ (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n := by
+  have hlft : (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n * 10 ^ m = (⌊√2 * 10 ^ n⌋:ℚ) * 10 ^ m / 10 ^ n := by
+    grind
+  have hmn : m ≤ n := by omega
+  have key : ⌊√2 * 10 ^ m⌋ * 10 ^ (n - m)
+    ≤ ⌊√2 * 10 ^ n⌋ := by
+      rw [Int.le_floor]
+      push_cast
+      calc (⌊√2 * 10 ^ m⌋ : ℝ) * 10 ^ (n - m)
+          ≤ √2 * 10 ^ m * 10 ^ (n - m) := mul_le_mul_of_nonneg_right (Int.floor_le _) (by positivity)
+        _ = √2 * 10 ^ n := by rw [mul_assoc, ← pow_add, Nat.add_sub_cancel' hmn]
+
+  have hZ : ⌊√2 * 10 ^ m⌋ * 10 ^ n ≤ ⌊√2 * 10 ^ n⌋ * 10 ^ m := by
+    calc ⌊√2 * 10 ^ m⌋ * 10 ^ n
+      = ⌊√2 * 10 ^ m⌋ * 10 ^ (n - m) * 10 ^ m := by rw [mul_assoc, ← pow_add, Nat.sub_add_cancel hmn]
+       _ ≤ ⌊√2 * 10 ^ n⌋ * 10 ^ m := mul_le_mul_of_nonneg_right key (by positivity)
+
+  rw [div_le_iff₀ (by positivity)]
+  rw [hlft]
+  rw [le_div_iff₀ (by positivity)]
+  exact_mod_cast hZ
+
+theorem boundness_of_sqrt_two_sequence (n:ℕ) :  (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≤ 1.42 := by
+  set a : ℚ := 1.42
+  have ht : √2 ≤ a := by
+    unfold a
+    nlinarith [Real.sq_sqrt (show (0:ℝ) ≤ 2 by norm_num), Real.sqrt_nonneg 2]
+  have hceil : ⌊√2 * 10 ^ n⌋ ≤ a * 10 ^ n  := by
+    have h : (⌊√2 * 10 ^ n⌋ : ℝ) ≤ a * 10 ^ n :=
+      calc (⌊√2 * 10 ^ n⌋ : ℝ)
+          ≤ √2 * 10 ^ n := Int.floor_le _
+        _ ≤ a * 10 ^ n := by exact mul_le_mul_of_nonneg_right ht (by positivity)
+    exact_mod_cast h
+  rw [div_le_iff₀ (by positivity)]
+  exact_mod_cast hceil
+
 /--
   Example 5.1.10. (This requires extensive familiarity with Mathlib's API for the real numbers.)
 -/
@@ -395,65 +431,36 @@ theorem Sequence.ex_5_1_10_a : (1:ℚ).Steady sqrt_two := by
   simp_all
   unfold sqrt_two at hn hm
   simp at hn hm
-  simp [hn, hm]
-  have hs : (1 : ℝ) ≤ √2 := by
-    nlinarith [Real.sq_sqrt (show (0:ℝ) ≤ 2 by norm_num), Real.sqrt_nonneg 2]
-  have hfloor : ∀(z:ℤ), (10 : ℤ) ^ z.toNat ≤ ⌊√2 * 10 ^ z.toNat⌋ := by
-    intro n
-    rw [Int.le_floor]
-    push_cast
-    exact le_mul_of_one_le_left (by positivity) hs
-  have ht : √2 ≤ 2 := by
-    nlinarith [Real.sq_sqrt (show (0:ℝ) ≤ 2 by norm_num), Real.sqrt_nonneg 2]
-  have hceil : ∀(z:ℤ), ⌊√2 * 10 ^ z.toNat⌋ ≤ 2 * (10 : ℤ) ^ z.toNat  := by
-    intro n
-    have h : (⌊√2 * 10 ^ n.toNat⌋ : ℝ) ≤ 2 * 10 ^ n.toNat :=
-      calc (⌊√2 * 10 ^ n.toNat⌋ : ℝ)
-          ≤ √2 * 10 ^ n.toNat := Int.floor_le _
-        _ ≤ 2 * 10 ^ n.toNat := by exact mul_le_mul_of_nonneg_right ht (by positivity)
-    exact_mod_cast h
-
-  have h1 : ∀(z:ℤ), (⌊√2 * 10 ^ z.toNat⌋:ℚ) / 10 ^ z.toNat ≥ 1 := by
-    intro n
-    simp
-    rw [le_div_iff₀ (by positivity)]
-    simp
-    exact_mod_cast hfloor n
-  have h2 : ∀(z:ℤ), (⌊√2 * 10 ^ z.toNat⌋:ℚ) / 10 ^ z.toNat ≤ 2 := by
-    intro n
-    rw [div_le_iff₀ (by positivity)]
-    exact_mod_cast hceil n
-
+  lift n to ℕ using hn
+  lift m to ℕ using hm
+  simp_all
   wlog h : m ≤ n
   . have h_0 : 1 = 1 := rfl
     simp_all
-    have hw := this m n hm hn
+    have hw := this m n
     rw [abs_sub_comm]
     apply hw
-    grind
+    try grind
+  have h0 : (⌊√2 * 10 ^ 0⌋:ℚ) / 10 ^ 0 = 1 := by
+    simp_all
+    rw [Int.floor_eq_iff]
+    constructor
+    . aesop
+    . simp_all
+      have h : √2 < (2 : ℝ) := by
+        nlinarith [Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 2),
+          Real.sqrt_nonneg 2]
+      norm_num at h ⊢
+      exact h
 
-  have hlft : (⌊√2 * 10 ^ n.toNat⌋:ℚ) / 10 ^ n.toNat * 10 ^ m.toNat = (⌊√2 * 10 ^ n.toNat⌋:ℚ) * 10 ^ m.toNat / 10 ^ n.toNat := by
-    grind
-  have hmn : m.toNat ≤ n.toNat := by omega
-  have key : ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ (n.toNat - m.toNat)
-    ≤ ⌊√2 * 10 ^ n.toNat⌋ := by
-      rw [Int.le_floor]
-      push_cast
-      calc (⌊√2 * 10 ^ m.toNat⌋ : ℝ) * 10 ^ (n.toNat - m.toNat)
-          ≤ √2 * 10 ^ m.toNat * 10 ^ (n.toNat - m.toNat) := mul_le_mul_of_nonneg_right (Int.floor_le _) (by positivity)
-        _ = √2 * 10 ^ n.toNat := by rw [mul_assoc, ← pow_add, Nat.add_sub_cancel' hmn]
-
-  have hZ : ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ n.toNat ≤ ⌊√2 * 10 ^ n.toNat⌋ * 10 ^ m.toNat := by
-    calc ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ n.toNat
-      = ⌊√2 * 10 ^ m.toNat⌋ * 10 ^ (n.toNat - m.toNat) * 10 ^ m.toNat := by rw [mul_assoc, ← pow_add, Nat.sub_add_cancel hmn]
-       _ ≤ ⌊√2 * 10 ^ n.toNat⌋ * 10 ^ m.toNat := mul_le_mul_of_nonneg_right key (by positivity)
-
-  have h3 :  (⌊√2 * 10 ^ m.toNat⌋:ℚ) / 10 ^ m.toNat ≤ (⌊√2 * 10 ^ n.toNat⌋:ℚ) / 10 ^ n.toNat := by
-    rw [div_le_iff₀ (by positivity)]
-    rw [hlft]
-    rw [le_div_iff₀ (by positivity)]
-    exact_mod_cast hZ
-
+  have h1 : ∀z, 1 ≤ (⌊√2 * 10 ^ z⌋:ℚ) / 10 ^ z  := by
+    intro z
+    have hz : 0 ≤ z := by aesop
+    have h2 := monotonicity_of_sqrt_two_sequence hz
+    rw [h0] at h2
+    exact h2
+  have h2 := boundness_of_sqrt_two_sequence n
+  have h3 := monotonicity_of_sqrt_two_sequence h
   rw [abs_of_nonneg (by linarith)]
   grind
 
@@ -473,13 +480,39 @@ theorem Sequence.ex_5_1_10_b : (0.1:ℚ).Steady (sqrt_two.from 1) := by
   lift n to ℕ using hn0
   lift m to ℕ using hm0
   simp_all
+  wlog h : m ≤ n
+  . have h_0 : 1 = 1 := rfl
+    simp_all
+    have hw := this m n
+    rw [abs_sub_comm]
+    apply hw <;> grind
+  have h0 : (⌊√2 * 10 ^ 1⌋:ℚ) / 10 ^ 1 = 1.4 := by
+    simp_all
+    have hfloor : ⌊√2 * 10⌋ = (14 : ℤ) := by
+      rw [Int.floor_eq_iff]
 
-  have h1 : ∀(n:ℕ), n ≥ 1 ∧ (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≥ 1.4 := by
-    -- we can use the fact that (⌊√2 * 10 ^ n⌋:ℚ) / 10 is monotonically increasing
-    sorry
-  have h2 : ∀(n:ℕ), (⌊√2 * 10 ^ n⌋:ℚ) / 10 ^ n ≤ 1.5 := by
-    sorry
-  sorry
+      have hsqrt_sq : (√2 : ℝ) ^ 2 = 2 := by
+        norm_num
+
+      have hsqrt_nonneg : (0 : ℝ) ≤ √2 := by
+        positivity
+
+      constructor
+      . push_cast
+        nlinarith [Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 2), Real.sqrt_nonneg 2]
+      . push_cast
+        nlinarith [Real.sq_sqrt (by norm_num : (0 : ℝ) ≤ 2), Real.sqrt_nonneg 2]
+    rw [hfloor]
+    grind
+
+  have h1 : ∀z ≥ 1, 1.4 ≤ (⌊√2 * 10 ^ z⌋:ℚ) / 10 ^ z  := by
+    intro z hz
+    have h2 := monotonicity_of_sqrt_two_sequence hz
+    rw [h0] at h2
+    exact h2
+  have h2 := boundness_of_sqrt_two_sequence n
+  have h3 := monotonicity_of_sqrt_two_sequence h
+  grind
 
 
 theorem Sequence.ex_5_1_10_c : (0.1:ℚ).EventuallySteady sqrt_two := by
