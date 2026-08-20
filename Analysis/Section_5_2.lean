@@ -38,10 +38,25 @@ lemma Rat.closeSeq_def (ε: ℚ) (a b: Sequence) :
 
 /-- Example 5.2.2 -/
 example : (0.1:ℚ).CloseSeq ((fun n:ℕ ↦ ((-1)^n:ℚ)):Sequence)
-((fun n:ℕ ↦ ((1.1:ℚ) * (-1)^n)):Sequence) := by sorry
+((fun n:ℕ ↦ ((1.1:ℚ) * (-1)^n)):Sequence) := by
+  rw [Rat.closeSeq_def]
+  intro n hn1 hn2
+  simp_all [Rat.Close]
+  lift n to ℕ using hn1
+  simp
+  by_cases h1: Even n
+  . have h_0 : 1 = 1 := by rfl
+    simp [h1.neg_one_pow]
+    grind
+  observe h2: Odd n
+  simp [h2.neg_one_pow]
+  grind
+
 
 /-- Example 5.2.2 -/
-example : ¬ (0.1:ℚ).Steady ((fun n:ℕ ↦ ((-1)^n:ℚ)):Sequence) := by sorry
+example : ¬ (0.1:ℚ).Steady ((fun n:ℕ ↦ ((-1)^n:ℚ)):Sequence) := by
+  intro h
+  sorry
 
 /-- Example 5.2.2 -/
 example : ¬ (0.1:ℚ).Steady ((fun n:ℕ ↦ ((1.1:ℚ) * (-1)^n)):Sequence) := by sorry
