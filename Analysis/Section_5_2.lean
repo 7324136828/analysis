@@ -55,11 +55,21 @@ example : (0.1:ℚ).CloseSeq ((fun n:ℕ ↦ ((-1)^n:ℚ)):Sequence)
 
 /-- Example 5.2.2 -/
 example : ¬ (0.1:ℚ).Steady ((fun n:ℕ ↦ ((-1)^n:ℚ)):Sequence) := by
-  intro h
-  sorry
+  rw [Rat.Steady.coe]
+  by_contra h;
+  specialize h 0 1;
+  simp [Rat.Close] at h
+  norm_num at h
+
 
 /-- Example 5.2.2 -/
-example : ¬ (0.1:ℚ).Steady ((fun n:ℕ ↦ ((1.1:ℚ) * (-1)^n)):Sequence) := by sorry
+example : ¬ (0.1:ℚ).Steady ((fun n:ℕ ↦ ((1.1:ℚ) * (-1)^n)):Sequence) := by
+  rw [Rat.Steady.coe]
+  by_contra h;
+  specialize h 0 1;
+  simp [Rat.Close] at h
+  norm_num at h
+
 
 /-- Definition 5.2.3 (Eventually ε-close sequences) -/
 lemma Rat.eventuallyClose_def (ε: ℚ) (a b: Sequence) :
@@ -67,17 +77,98 @@ lemma Rat.eventuallyClose_def (ε: ℚ) (a b: Sequence) :
 
 /-- Definition 5.2.3 (Eventually ε-close sequences) -/
 lemma Rat.eventuallyClose_iff (ε: ℚ) (a b: ℕ → ℚ) :
-    ε.EventuallyClose (a:Sequence) (b:Sequence) ↔ ∃ N, ∀ n ≥ N, |a n - b n| ≤ ε := by sorry
+    ε.EventuallyClose (a:Sequence) (b:Sequence) ↔ ∃ N, ∀ n ≥ N, |a n - b n| ≤ ε := by
+      rw [eventuallyClose_def]
+      constructor <;> rintro ⟨N, hN⟩
+      . set A := (max N 0).toNat
+        use A
+        intro n hn
+        unfold A at hn
+        have hNA : N ≤ n := by grind
+        rw [closeSeq_def] at hN
+        specialize hN n _ _
+        <;> try grind
+        . unfold Sequence.from
+          simp_all
+        . unfold Sequence.from
+          simp_all
+        . simp [hNA] at hN
+          exact hN
+      . use N
+        rw [closeSeq_def]
+        intro n hn1 hn2
+        simp_all
+        have hn2 : 0 ≤ n := by grind
+        simp [hn2]
+        lift n to ℕ using hn2
+        exact hN n (by exact_mod_cast hn1)
+
 
 /-- Example 5.2.5 -/
 example : ¬ (0.1:ℚ).CloseSeq ((fun n:ℕ ↦ (1:ℚ)+10^(-(n:ℤ)-1)):Sequence)
-  ((fun n:ℕ ↦ (1:ℚ)-10^(-(n:ℤ)-1)):Sequence) := by sorry
+  ((fun n:ℕ ↦ (1:ℚ)-10^(-(n:ℤ)-1)):Sequence) := by
+    rw [Rat.closeSeq_def]
+    intro h
+    simp_all
+    have h1 := h 0 (by aesop)
+    simp [Rat.Close] at h1
+    grind
+
+theorem h_simplify_10_n {n : ℕ} : |(10:ℚ) ^ (-(n: ℤ) - 1) + (10:ℚ) ^ (-(n: ℤ) - 1)| = 2 * ((10:ℚ) ^ (-(n: ℤ))) * ((10:ℚ) ^ (-(1: ℤ))) := by
+  calc |(10:ℚ) ^ (-(n: ℤ) - 1) + (10:ℚ) ^ (-(n: ℤ) - 1)| = |2 * (10:ℚ) ^ (-(n: ℤ) - 1)| := by
+          congr
+          ring
+    _ = 2 * |(10:ℚ) ^ (-(n: ℤ) - 1)| := by
+      rw [abs_mul]
+      norm_num
+    _ = 2 * |(10:ℚ) ^ (-(n: ℤ)) * ((10:ℚ) ^ (-(1: ℤ)))| := by
+      congr
+      apply zpow_add₀
+      linarith
+    _ = 2 * |(10:ℚ) ^ (-(n: ℤ))| * |((10:ℚ) ^ (-(1: ℤ)))| := by
+      rw [abs_mul]
+      rw [mul_assoc]
+    _ = 2 * (10:ℚ) ^ (-(n: ℤ)) * ((10:ℚ) ^ (-(1: ℤ))) := by
+      norm_num
 
 example : (0.1:ℚ).EventuallyClose ((fun n:ℕ ↦ (1:ℚ)+10^(-(n:ℤ)-1)):Sequence)
-  ((fun n:ℕ ↦ (1:ℚ)-10^(-(n:ℤ)-1)):Sequence) := by sorry
+  ((fun n:ℕ ↦ (1:ℚ)-10^(-(n:ℤ)-1)):Sequence) := by
+    use 2
+    rw [Rat.closeSeq_def]
+    intro n hn1 hn2
+    lift n to ℕ using (by grind)
+    simp_all
+    simp [Rat.Close]
+    rw [h_simplify_10_n]
+    have h2 : (0.1: ℚ) = (2: ℚ) * (0.5 : ℚ) * ((10:ℚ) ^ (-(1: ℤ))) := by
+      norm_num
+    rw [h2]
+    gcongr
+    have h3 : (10:ℚ) ^ (-(n: ℤ)) ≤ (10:ℚ) ^ (-(2: ℤ)) := by
+      gcongr <;> try grind
+    have h4 : (10:ℚ) ^ (-(2: ℤ)) ≤ 0.5 := by
+      nlinarith
+    grind
+
 
 example : (0.01:ℚ).EventuallyClose ((fun n:ℕ ↦ (1:ℚ)+10^(-(n:ℤ)-1)):Sequence)
-  ((fun n:ℕ ↦ (1:ℚ)-10^(-(n:ℤ)-1)):Sequence) := by sorry
+  ((fun n:ℕ ↦ (1:ℚ)-10^(-(n:ℤ)-1)):Sequence) := by
+    use 3
+    rw [Rat.closeSeq_def]
+    intro n hn1 hn2
+    lift n to ℕ using (by grind)
+    simp_all
+    simp [Rat.Close]
+    rw [h_simplify_10_n]
+    have h2 : (1e-2: ℚ) = (2: ℚ) * (0.05 : ℚ) * ((10:ℚ) ^ (-(1: ℤ))) := by
+      norm_num
+    rw [h2]
+    gcongr
+    have h3 : (10:ℚ) ^ (-(n: ℤ)) ≤ (10:ℚ) ^ (-(2: ℤ)) := by
+      gcongr <;> try grind
+    have h4 : (10:ℚ) ^ (-(2: ℤ)) ≤ 0.5 := by
+      nlinarith
+    grind
 
 /-- Definition 5.2.6 (Equivalent sequences) -/
 abbrev Sequence.Equiv (a b: ℕ → ℚ) : Prop :=
@@ -89,7 +180,32 @@ lemma Sequence.equiv_def (a b: ℕ → ℚ) :
 
 /-- Definition 5.2.6 (Equivalent sequences) -/
 lemma Sequence.equiv_iff (a b: ℕ → ℚ) : Equiv a b ↔ ∀ ε > 0, ∃ N, ∀ n ≥ N, |a n - b n| ≤ ε := by
-  sorry
+  rw [equiv_def]
+  constructor <;> intro h ε he;
+  . have h1 := h ε he
+    rw [Rat.eventuallyClose_def] at h1
+    obtain ⟨N, hN⟩ := h1
+    set A := (max 0 N).toNat
+    use A
+    intro n hn
+    rw [Rat.closeSeq_def] at hN
+    simp at hN
+    specialize hN n (by aesop) (by aesop) (by aesop) (by aesop)
+    simp_all
+    have h1 : N ≤ n := by
+      grind
+    simp [h1] at hN
+    exact hN
+  . have ⟨N, hN⟩ := h ε he
+    use N
+    rw [Rat.closeSeq_def]
+    simp_all
+    intro n hn
+    lift n to ℕ using (by omega)
+    have hn0 : 0 ≤ (n:ℤ) := by grind
+    simp [hn0]
+    simp_all
+    exact hN n hn
 
 /-- Proposition 5.2.8 -/
 lemma Sequence.equiv_example :
@@ -125,12 +241,76 @@ lemma Sequence.equiv_example :
   choose N hN using hN; use N; intro n hn
   linarith [hab' N n hn]
 
+theorem Sequence.Equiv_Is_Symm {a b: ℕ → ℚ} (hab: Equiv a b)  :
+  Equiv b a := by
+    simp [equiv_iff] at *
+    peel hab with e he
+    intro he1
+    have ⟨N, hN⟩ := he he1
+    simp_all
+    use N
+    intro n hN1
+    have hN2 := hN n hN1
+    grind
+
+theorem Sequence.isCauchy_of_equiv_one_side {a b: ℕ → ℚ} (hab: Equiv a b) :
+    (a:Sequence).IsCauchy → (b:Sequence).IsCauchy := by
+      simp [Sequence.isCauchy_def]
+      simp [equiv_def] at hab
+      intro h ε he
+      have ⟨N, hN⟩ := hab (ε/3) (by aesop)
+      have ⟨M, ⟨hM1,hM2⟩⟩ := h (ε/3) (by aesop)
+      use (max N M)
+      constructor
+      . simp_all
+      . simp only [Rat.closeSeq_def, Rat.Steady] at *
+        simp_all
+        intro n hn1 hn2 m hm1 hm2
+        have hN2 := hN m (by grind) (by grind)
+        replace hN := hN n (by grind) (by grind)
+        replace hM2 := hM2 n (by grind) m (by grind)
+        have hn3 : 0 ≤ n := by grind
+        have hm3 : 0 ≤ m := by grind
+        simp [hn3, hm3] at *
+        simp [Rat.Close] at *
+        lift n to ℕ using (by omega)
+        lift m to ℕ using (by omega)
+        simp_all
+        calc _ = |b n - a n + a n - a m + a m - b m| := by grind
+              _ ≤ |b n - a n| + |a n - a m + a m - b m| := by grind
+              _ ≤ |b n - a n| + |a n - a m| + |a m - b m| := by grind
+              _ ≤ (ε/3) + |a n - a m| + |a m - b m| := by grind
+              _ ≤ (ε/3) + (ε/3) + |a m - b m| := by grind
+              _ ≤ (ε/3) + (ε/3) + (ε/3) := by grind
+              _ ≤ ε := by grind
+
+
 /-- Exercise 5.2.1 -/
 theorem Sequence.isCauchy_of_equiv {a b: ℕ → ℚ} (hab: Equiv a b) :
-    (a:Sequence).IsCauchy ↔ (b:Sequence).IsCauchy := by sorry
+    (a:Sequence).IsCauchy ↔ (b:Sequence).IsCauchy := by
+      constructor
+      . exact Sequence.isCauchy_of_equiv_one_side hab
+      . exact Sequence.isCauchy_of_equiv_one_side (Equiv_Is_Symm hab)
+
+
+theorem Sequence.EventuallyClose_Is_Symm {ε:ℚ}{a b: ℕ → ℚ} (hab: ε.EventuallyClose a b): ε.EventuallyClose b a := by
+    simp [Rat.eventuallyClose_def] at *
+    obtain ⟨M, hM⟩ := hab
+    use M
+    simp [Rat.closeSeq_def] at *
+    simp_all
+    peel hM with n hA hB hC
+    simp [Rat.Close] at *
+    grind
+
+theorem Sequence.isBounded_of_eventuallyClose_one_side {ε:ℚ} {a b: ℕ → ℚ} (hab: ε.EventuallyClose a b) :
+    (a:Sequence).IsBounded → (b:Sequence).IsBounded := by
+      -- use finite sequence bound + the epsilon bound given by "a" sequence to finish the proof.
+      sorry
 
 /-- Exercise 5.2.2 -/
 theorem Sequence.isBounded_of_eventuallyClose {ε:ℚ} {a b: ℕ → ℚ} (hab: ε.EventuallyClose a b) :
-    (a:Sequence).IsBounded ↔ (b:Sequence).IsBounded := by sorry
+    (a:Sequence).IsBounded ↔ (b:Sequence).IsBounded := by
+    sorry
 
 end Chapter5
