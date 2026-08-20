@@ -601,15 +601,25 @@ example : ¬((fun n:ℕ ↦ (-1)^n * (n+1:ℚ)):Sequence).IsBounded := by
 
 /-- Example 5.1.13 -/
 example : ((fun n:ℕ ↦ (-1:ℚ)^n):Sequence).IsBounded := by
-  refine ⟨ 1, by norm_num, ?_ ⟩; intro i; by_cases h: 0 ≤ i <;> simp [h]
+  use 1;
+  constructor
+  . norm_num
+  intro i;
+  by_cases h: 0 ≤ i
+  <;> simp [h]
 
 /-- Example 5.1.13 -/
 example : ¬((fun n:ℕ ↦ (-1:ℚ)^n):Sequence).IsCauchy := by
   rw [Sequence.IsCauchy.coe]
-  by_contra h; specialize h (1/2 : ℚ) (by norm_num)
-  choose N h using h; specialize h N _ (N+1) _ <;> try omega
+  by_contra h;
+  specialize h (1/2 : ℚ) (by norm_num)
+  choose N h using h;
+  specialize h N _ (N+1) _
+  <;> try omega
   by_cases h': Even N
-  · simp [h'.neg_one_pow, (h'.add_one).neg_one_pow, Section_4_3.dist] at h
+  · simp [h'.neg_one_pow] at h
+    simp [(h'.add_one).neg_one_pow] at h
+    simp [Section_4_3.dist] at h
     norm_num at h
   observe h₁: Odd N
   observe h₂: Even (N+1)
@@ -620,28 +630,125 @@ example : ¬((fun n:ℕ ↦ (-1:ℚ)^n):Sequence).IsCauchy := by
 lemma IsBounded.finite {n:ℕ} (a: Fin n → ℚ) : ∃ M ≥ 0,  BoundedBy a M := by
   -- this proof is written to follow the structure of the original text.
   induction' n with n hn
-  . use 0; simp
+  . use 0;
+    simp
   set a' : Fin n → ℚ := fun m ↦ a m.castSucc
   choose M hpos hM using hn a'
   have h1 : BoundedBy a' (M + |a (Fin.ofNat _ n)|) := fun m ↦ (hM m).trans (by simp)
   have h2 : |a (Fin.ofNat _ n)| ≤ M + |a (Fin.ofNat _ n)| := by simp [hpos]
   refine ⟨ M + |a (Fin.ofNat _ n)|, by positivity, ?_ ⟩
-  intro m; obtain ⟨ j, rfl ⟩ | rfl := Fin.eq_castSucc_or_eq_last m
+  intro m;
+  have h3 := Fin.eq_castSucc_or_eq_last m
+  obtain ⟨ j, rfl ⟩ | rfl := h3
   . grind
-  convert h2; simp
+  convert h2;
+  simp
 
 /-- Lemma 5.1.15 (Cauchy sequences are bounded) / Exercise 5.1.1 -/
 lemma Sequence.isBounded_of_isCauchy {a:Sequence} (h: a.IsCauchy) : a.IsBounded := by
-  sorry
+  rw [isCauchy_def] at h
+  have ⟨N, hN1, hN2⟩ := h 1 (by aesop)
+  simp at hN1 hN2
+  simp [Rat.steady_def] at hN2
+  specialize hN2 N (by aesop) (by aesop)
+  simp [Rat.Close, hN1] at hN2
+  have hN3:  ∀m ≥ N, |a.seq N - a.seq m| ≤ 1 := by
+    intro m hm
+    have h1 : a.n₀ ≤ m := by grind
+    specialize hN2 m h1 hm
+    simp [h1, hm] at hN2
+    exact hN2
+  set s := a.n₀
+  let W : ℕ := (N - s + 1).toNat
+  set b : Fin (W) → ℚ := fun x ↦ a.seq (s + x)
+  have ⟨c, ⟨hc1, hc2⟩⟩ := IsBounded.finite b
+  use (c+1)
+  constructor
+  . grind
+  unfold Chapter5.BoundedBy at hc2
+  unfold Sequence.BoundedBy at ⊢
+  intro n
+  have hn : n < s ∨ (s ≤ n ∧ n ≤  N) ∨ (N < n) := by omega
+  rcases hn with hn | hn | hn
+  . have h1 := a.vanish
+    specialize h1 n hn
+    rw [h1]
+    grind
+  . set x := (n - s).toNat
+    have hx : x < W := by
+      unfold W
+      unfold x
+      simp
+      constructor
+      <;> try grind
+    set y : Fin W := ⟨x, hx⟩
+    specialize hc2 y
+    unfold b at hc2
+    unfold y at hc2
+    unfold x at hc2
+    simp at hc2
+    simp [hn.1] at hc2
+    grind
+  . have h_0 : 1 = 1 := by rfl
+    specialize hN3 n (by grind)
+    rw [abs_sub_comm] at hN3
+    set x := (N - s).toNat
+    have hx : x < W := by
+      unfold W
+      unfold x
+      simp
+      grind
+    set y : Fin W := ⟨x, hx⟩
+    specialize hc2 y
+    unfold b at hc2
+    unfold y at hc2
+    unfold x at hc2
+    simp at hc2
+    have hy: max (N - s) 0 = (N-s)  := by grind
+    rw [hy] at hc2
+    simp at hc2
+    have h4 := Section_4_3.abs_add (a.seq n - a.seq N) (a.seq N)
+    simp at h4
+    grind
 
 /-- Exercise 5.1.2 -/
 theorem Sequence.isBounded_add {a b:ℕ → ℚ} (ha: (a:Sequence).IsBounded) (hb: (b:Sequence).IsBounded):
-    (a + b:Sequence).IsBounded := by sorry
+    (a + b:Sequence).IsBounded := by
+      have ⟨A, hA1, hA2⟩  := ha
+      have ⟨B, hB1, hB2⟩  := hb
+      use (A + B)
+      constructor
+      . positivity
+      peel hA2 with n hA3
+      have hB3 := hB2 n
+      simp_all
+      split_ifs with h1 <;> grind
+
 
 theorem Sequence.isBounded_sub {a b:ℕ → ℚ} (ha: (a:Sequence).IsBounded) (hb: (b:Sequence).IsBounded):
-    (a - b:Sequence).IsBounded := by sorry
+    (a - b:Sequence).IsBounded := by
+      have ⟨A, hA1, hA2⟩  := ha
+      have ⟨B, hB1, hB2⟩  := hb
+      use (A + B)
+      constructor
+      . positivity
+      peel hA2 with n hA3
+      have hB3 := hB2 n
+      simp_all
+      split_ifs with h1 <;> grind
 
 theorem Sequence.isBounded_mul {a b:ℕ → ℚ} (ha: (a:Sequence).IsBounded) (hb: (b:Sequence).IsBounded):
-    (a * b:Sequence).IsBounded := by sorry
+    (a * b:Sequence).IsBounded := by
+      have ⟨A, hA1, hA2⟩  := ha
+      have ⟨B, hB1, hB2⟩  := hb
+      use (A * B)
+      constructor
+      . positivity
+      peel hA2 with n hA3
+      have hB3 := hB2 n
+      simp_all
+      split_ifs with h1 <;> simp_all
+      . gcongr
+      . positivity
 
 end Chapter5
