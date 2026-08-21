@@ -243,6 +243,15 @@ theorem Real.LIM_add {a b:ℕ → ℚ} (ha: (a:Sequence).IsCauchy) (hb: (b:Seque
   simp [LIM];
   grind
 
+theorem Rat.homogenity_of_aa_x_gt_0_aa_ge_0 {aa x:  ℚ} (hx : x > 0)(haa: aa ≥ 0) : aa * (x / (aa + 1)) < x := by
+  have hnm1 {aa:  ℚ} (haa: aa ≥ 0):  aa / (aa + 1) < 1 := by
+    have hpos : 0 < aa + 1 := by
+      linarith
+    apply (div_lt_iff₀ hpos).2
+    linarith
+  calc _ = x * (aa / (aa + 1)) := by ring
+      _ < x * 1 := by exact mul_lt_mul_of_pos_left (hnm1 haa) (hx)
+      _ = x := by ring
 
 /-- Proposition 5.3.10 (Product of Cauchy sequences is Cauchy) -/
 theorem Sequence.IsCauchy.mul {a b:ℕ → ℚ}  (ha: (a:Sequence).IsCauchy) (hb: (b:Sequence).IsCauchy) :
@@ -262,19 +271,10 @@ theorem Sequence.IsCauchy.mul {a b:ℕ → ℚ}  (ha: (a:Sequence).IsCauchy) (hb
     unfold v
     rw [lt_div_iff₀ (by positivity)]
     simp_all
-  have hnm1 {aa:  ℚ} (haa: aa ≥ 0):  aa / (aa + 1) < 1 := by
-    have hpos : 0 < aa + 1 := by
-      linarith
-    apply (div_lt_iff₀ hpos).2
-    linarith
-  have hnm2 {aa x:  ℚ} (hx : x > 0)(haa: aa ≥ 0) : aa * (x / (aa + 1)) < x := by
-    calc _ = x * (aa / (aa + 1)) := by ring
-        _ < x * 1 := by exact mul_lt_mul_of_pos_left (hnm1 haa) (hx)
-        _ = x := by ring
   have huv : BB * u + BA * v ≤ ε := by
     unfold u v
-    have h1 := hnm2 (half_pos hε) hBA1
-    have h2 := hnm2 (half_pos hε) hBB1
+    have h1 := Rat.homogenity_of_aa_x_gt_0_aa_ge_0 (half_pos hε) hBA1
+    have h2 := Rat.homogenity_of_aa_x_gt_0_aa_ge_0 (half_pos hε) hBB1
     linarith
   -- hBA2 : ∀ (n : ℤ), |if 0 ≤ n then a n.toNat else 0| ≤ BA
   -- hBB2 : ∀ (n : ℤ), |if 0 ≤ n then b n.toNat else 0| ≤ BB
@@ -310,34 +310,26 @@ theorem Sequence.IsCauchy.mul {a b:ℕ → ℚ}  (ha: (a:Sequence).IsCauchy) (hb
 theorem Sequence.mul_equiv_left {a a':ℕ → ℚ} (b:ℕ → ℚ) (hb : (b:Sequence).IsCauchy) (haa': Equiv a a') :
   Equiv (a * b) (a' * b) := by
     -- standby
-    -- have ⟨BB, ⟨hBB1, hBB2⟩⟩ := Sequence.isBounded_of_isCauchy hb
-    -- simp only [boundedBy_def] at *
-    -- replace hBB2 : ∀ (n : ℕ), |b n| ≤ BB := by
-    --   intro n
-    --   have := hBB2 n
-    --   simp at this
-    --   exact this
+    have ⟨BB, ⟨hBB1, hBB2⟩⟩ := Sequence.isBounded_of_isCauchy hb
+    simp only [boundedBy_def] at *
+    replace hBB2 : ∀ (n : ℕ), |b n| ≤ BB := by
+      intro n
+      have := hBB2 n
+      simp at this
+      exact this
     rw [equiv_def] at *
 
     intro ε he
-    set u := (ε/2)
-    set v := (ε/2)
+    set u := (ε/(BB+1))
     have hu : 0 < u := by
       unfold u
+      rw [lt_div_iff₀ (by positivity)]
       simp_all
-    have hv : 0 < v := by
-      unfold v
-      simp_all
-
-    simp only [Sequence.isCauchy_def] at *
+    have h1 := Rat.homogenity_of_aa_x_gt_0_aa_ge_0 he hBB1
     replace haa' := haa' u hu
-    replace hb := hb v hv
     simp only [Rat.eventuallyClose_def] at *
-    simp_all [Rat.eventuallySteady_def]
-    obtain ⟨N1, ⟨hN11, hN12⟩⟩ := hb
     obtain ⟨N2, hN2⟩ := haa'
-    lift N1 to ℕ using hN11
-    use max N1 N2
+    use max 0 N2
     simp only [Rat.closeSeq_def]
     intro n hn1 hn2
     lift n to ℕ using (by grind)
@@ -349,6 +341,21 @@ theorem Sequence.mul_equiv_left {a a':ℕ → ℚ} (b:ℕ → ℚ) (hb : (b:Sequ
     simp at hN2
     simp [hn1] at hN2
     simp only [Rat.Close] at hN2
+    replace hBB2 := hBB2 n
+    calc _ =  |(a n  - a' n) * b n| := by grind
+         _ ≤  |(a n  - a' n)| * |b n| := by grind
+         _ ≤  |(a n  - a' n)| * BB := by gcongr
+         _ ≤  u * BB := by gcongr
+         _ ≤ ( ε / (BB + 1)) * BB := by
+            unfold u
+            nlinarith
+         _ = BB * ( ε / (BB + 1)) := by ring
+         _ ≤ ε := by grind
+
+
+
+
+
 
 
 
