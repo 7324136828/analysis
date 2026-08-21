@@ -353,35 +353,11 @@ theorem Sequence.mul_equiv_left {a a':ℕ → ℚ} (b:ℕ → ℚ) (hb : (b:Sequ
          _ ≤ ε := by grind
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
---
-
--- simp only [Rat.Close] at *
---
-
-
-
-
-
-
-
-
 /--Proposition 5.3.10 (Product of equivalent sequences is equivalent) / Exercise 5.3.2 -/
 theorem Sequence.mul_equiv_right {b b':ℕ → ℚ} (a:ℕ → ℚ)  (ha : (a:Sequence).IsCauchy)  (hbb': Equiv b b') :
-  Equiv (a * b) (a * b') := by simp_rw [mul_comm]; exact mul_equiv_left a ha hbb'
+  Equiv (a * b) (a * b') := by
+    simp_rw [mul_comm];
+    exact mul_equiv_left a ha hbb'
 
 /--Proposition 5.3.10 (Product of equivalent sequences is equivalent) / Exercise 5.3.2 -/
 theorem Sequence.mul_equiv
@@ -389,8 +365,10 @@ theorem Sequence.mul_equiv
   (ha : (a:Sequence).IsCauchy)
   (hb' : (b':Sequence).IsCauchy)
   (haa': Equiv a a')
-  (hbb': Equiv b b') : Equiv (a * b) (a' * b') :=
-    equiv_trans (mul_equiv_right _ ha hbb') (mul_equiv_left _ hb' haa')
+  (hbb': Equiv b b') : Equiv (a * b) (a' * b') := by
+    have h1 := (mul_equiv_left _ hb' haa')
+    have h2 := (mul_equiv_right _ ha hbb')
+    exact equiv_trans h2 h1
 
 /-- Definition 5.3.9 (Product of reals) -/
 noncomputable instance Real.mul_inst : Mul Real where
@@ -413,12 +391,56 @@ instance Real.instRatCast : RatCast Real where
   ratCast := fun q ↦
     Quotient.mk _ (CauchySequence.mk' (a := fun _ ↦ q) (Sequence.IsCauchy.const q))
 
-theorem Real.ratCast_def (q:ℚ) : (q:Real) = LIM (fun _ ↦ q) := by rw [LIM_def]; rfl
+theorem Real.ratCast_def (q:ℚ) : (q:Real) = LIM (fun _ ↦ q) := by
+  rw [LIM_def];
+  rfl
 
 /-- Exercise 5.3.3 -/
 @[simp]
 theorem Real.ratCast_inj (q r:ℚ) : (q:Real) = (r:Real) ↔ q = r := by
-  sorry
+  simp [ratCast_def]
+  rw [LIM_eq_LIM]
+  simp only [Sequence.equiv_iff] at *
+  constructor <;> intro h
+  . by_contra h0
+    wlog h1 : q < r
+    . have h_0 : 1 = 1 := rfl
+      have h2 : r < q := by grind
+      have h3 : ¬r = q := by grind
+      apply this r q _ h3 h2
+      intro e he
+      replace h := h e he
+      obtain ⟨N, hN⟩ := h
+      use N
+      intro n hn
+      replace hN := hN n hn
+      rw [abs_sub_comm]
+      exact hN
+    set a := (r - q)/2
+    replace h := h a (by aesop)
+    obtain ⟨N, hN⟩ := h
+    replace hN := hN N (by aesop)
+    unfold a at hN
+    rw [abs_sub_comm] at hN
+    have h1 : |r - q| = r - q := by grind
+    rw [h1] at hN
+    rw [le_div_iff₀ (by positivity)] at hN
+    have h2 : 0 < (r - q) := by grind
+    have h3 := (div_le_div_iff_of_pos_right h2).mpr hN
+    have h4 : (r - q) * 2 / (r - q) = 2 := by grind
+    have h5 : (r - q) / (r - q) = 1 := by grind
+    rw [h4, h5] at h3
+    linarith
+  . intro e he
+    use 0
+    intro n hn
+    rw [h]
+    simp
+    positivity
+  all_goals exact Sequence.IsCauchy.const _
+
+
+
 
 instance Real.instOfNat {n:ℕ} : OfNat Real n where
   ofNat := ((n:ℚ):Real)
