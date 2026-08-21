@@ -305,12 +305,56 @@ theorem Sequence.EventuallyClose_Is_Symm {ε:ℚ}{a b: ℕ → ℚ} (hab: ε.Eve
 
 theorem Sequence.isBounded_of_eventuallyClose_one_side {ε:ℚ} {a b: ℕ → ℚ} (hab: ε.EventuallyClose a b) :
     (a:Sequence).IsBounded → (b:Sequence).IsBounded := by
-      -- use finite sequence bound + the epsilon bound given by "a" sequence to finish the proof.
-      sorry
+      intro h
+      simp only [Rat.eventuallyClose_def, isBounded_def] at *
+      obtain ⟨A, hA⟩ := hab
+      obtain ⟨B, ⟨hB1, hB2⟩⟩ := h
+      set n := (max 0 A).toNat
+      let c : Fin n → ℚ := fun m ↦ b m
+      have ⟨W, ⟨hW1, hW2⟩⟩ := IsBounded.finite c
+      use max W (B + ε)
+      constructor
+      . simp_all
+      simp only [boundedBy_def] at *
+      unfold Chapter5.BoundedBy at hW2
+      intro m
+      have h1 : m < 0 ∨ (0 ≤ m ∧ m < n) ∨ n ≤ m := by grind
+      rcases h1 with h1 | h1 | h1
+      . simp_all
+        have h2 : ¬ 0 ≤ m := by aesop
+        simp [h2]
+        grind
+      . have h_0 : 1 = 1 := by rfl
+        lift m to ℕ using h1.1
+        have hm : m < n := by
+          simp_all
+        set E : Fin n := ⟨m, hm⟩
+        have hE := hW2 E
+        unfold E at hE
+        unfold c at hE
+        simp_all
+      . have h_0 : 1 = 1 := by rfl
+        simp only [Rat.closeSeq_def] at hA
+        simp_all
+        have hB := hA m (by aesop) (by aesop)
+        have hC : 0 ≤ m := by aesop
+        have hD := hB2 m
+        simp [hC] at hD
+        simp [hC]
+        lift m to ℕ using hC
+        simp_all [Rat.Close]
+        rw [abs_sub_comm] at hB
+        right;
+        calc _ = |b m - a m + a m| := by grind
+            _  ≤ |b m - a m| + |a m| := by grind
+            _  ≤ ε + B := by grind
+            _  ≤ B + ε := by grind
 
 /-- Exercise 5.2.2 -/
 theorem Sequence.isBounded_of_eventuallyClose {ε:ℚ} {a b: ℕ → ℚ} (hab: ε.EventuallyClose a b) :
     (a:Sequence).IsBounded ↔ (b:Sequence).IsBounded := by
-    sorry
+    constructor
+    . exact Sequence.isBounded_of_eventuallyClose_one_side hab
+    . exact Sequence.isBounded_of_eventuallyClose_one_side (EventuallyClose_Is_Symm hab)
 
 end Chapter5
