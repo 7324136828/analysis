@@ -56,30 +56,73 @@ instance CauchySequence.instCoeFun : CoeFun CauchySequence (fun _ ↦ ℕ → �
 @[simp]
 theorem CauchySequence.coe_to_sequence (a: CauchySequence) :
     ((a:ℕ → ℚ):Sequence) = a.toSequence := by
-  apply Sequence.ext (by simp [Sequence.n0_coe, a.zero])
-  ext n; by_cases h:n ≥ 0 <;> simp_all
-  rw [a.vanish]; rwa [a.zero]
+  apply Sequence.ext (by
+    simp [Sequence.n0_coe]
+    simp [a.zero]
+  )
+  ext n;
+  by_cases h:n ≥ 0
+  <;> simp_all
+  rw [a.vanish];
+  rwa [a.zero]
 
 @[simp]
 theorem CauchySequence.coe_coe {a:ℕ → ℚ} (ha: (a:Sequence).IsCauchy) : mk' ha = a := by rfl
 
 /-- Proposition 5.3.3 / Exercise 5.3.1 -/
 theorem Sequence.equiv_trans {a b c:ℕ → ℚ} (hab: Equiv a b) (hbc: Equiv b c) :
-  Equiv a c := by sorry
+  Equiv a c := by
+    simp only [equiv_iff] at *
+    intro ε he
+    replace hab := hab (ε/2) (by grind)
+    replace hbc := hbc (ε/2) (by grind)
+    choose N1 hN1 using hab
+    choose N2 hN2 using hbc
+    use (max N1 N2)
+    intro n hn
+    have hn1 : N1 ≤ n := by grind
+    have hn2 : N2 ≤ n := by grind
+    replace hN1 := hN1 n hn1
+    replace hN2 := hN2 n hn2
+    calc _ = |a n - b n + b n - c n| := by grind
+         _ ≤ |a n - b n| + |b n - c n| := by grind
+         _ ≤ (ε/2) + (ε/2) := by grind
+         _ = ε := by norm_num
 
 /-- Proposition 5.3.3 / Exercise 5.3.1 -/
 instance CauchySequence.instSetoid : Setoid CauchySequence where
   r := fun a b ↦ Sequence.Equiv a b
   iseqv := {
-     refl := sorry
-     symm := sorry
-     trans := sorry
+     refl := by
+      intro x
+      simp only [Sequence.equiv_iff] at *
+      intro ε he
+      use 0
+      intro n hn
+      simp_all
+      positivity
+     symm := by
+      intro x y hxy
+      exact Sequence.Equiv_Is_Symm hxy
+     trans := by
+      intro x y z hxy hyz
+      exact Sequence.equiv_trans hxy hyz
   }
 
 theorem CauchySequence.equiv_iff (a b: CauchySequence) : a ≈ b ↔ Sequence.Equiv a b := by rfl
 
 /-- Every constant sequence is Cauchy. -/
-theorem Sequence.IsCauchy.const (a:ℚ) : ((fun _:ℕ ↦ a):Sequence).IsCauchy := by sorry
+theorem Sequence.IsCauchy.const (a:ℚ) : ((fun _:ℕ ↦ a):Sequence).IsCauchy := by
+  simp [Sequence.isCauchy_def]
+  intro ε he
+  simp [Rat.eventuallySteady_def]
+  use 0
+  simp_all [Rat.steady_def]
+  intro n hn m hm
+  simp [Rat.Close]
+  positivity
+
+
 
 instance CauchySequence.instZero : Zero CauchySequence where
   zero := CauchySequence.mk' (a := fun _: ℕ ↦ 0) (Sequence.IsCauchy.const (0:ℚ))
@@ -97,23 +140,38 @@ noncomputable abbrev LIM (a:ℕ → ℚ) : Real :=
 
 theorem LIM_def {a:ℕ → ℚ} (ha: (a:Sequence).IsCauchy) :
     LIM a = Quotient.mk _ (CauchySequence.mk' ha) := by
-  rw [LIM, dif_pos ha]
+  rw [LIM]
+  conv =>
+    lhs
+    rhs
+    rw [dif_pos ha]
+
 
 /-- Definition 5.3.1 (Real numbers) -/
 theorem Real.eq_lim (x:Real) : ∃ (a:ℕ → ℚ), (a:Sequence).IsCauchy ∧ x = LIM a := by
-  apply Quotient.ind _ x; intro a; use (a:ℕ → ℚ)
+  apply Quotient.ind _ x;
+  intro a;
+  use (a:ℕ → ℚ)
   observe : ((a:ℕ → ℚ):Sequence) = a.toSequence
-  rw [this, LIM_def (by convert a.cauchy)]
+  rw [this]
+  rw [LIM_def (by convert a.cauchy)]
   refine ⟨ a.cauchy, ?_ ⟩
-  congr; ext n; simp; replace := congr($this n); simp_all
+  congr;
+  ext n;
+  simp;
+  replace := congr($this n);
+  simp_all
 
 /-- Definition 5.3.1 (Real numbers) -/
 theorem Real.LIM_eq_LIM {a b:ℕ → ℚ} (ha: (a:Sequence).IsCauchy) (hb: (b:Sequence).IsCauchy) :
   LIM a = LIM b ↔ Sequence.Equiv a b := by
-  constructor
-  . intro h; replace h := Quotient.exact h
-    rwa [dif_pos ha, dif_pos hb, CauchySequence.equiv_iff] at h
-  intro h; apply Quotient.sound
+  constructor <;> intro h;
+  . replace h := Quotient.exact h
+    rw [dif_pos ha] at h
+    rw [dif_pos hb] at h
+    rw [CauchySequence.equiv_iff] at h
+    apply h
+  apply Quotient.sound
   rwa [dif_pos ha, dif_pos hb, CauchySequence.equiv_iff]
 
 /--Lemma 5.3.6 (Sum of Cauchy sequences is Cauchy)-/
@@ -128,7 +186,8 @@ theorem Sequence.IsCauchy.add {a b:ℕ → ℚ}  (ha: (a:Sequence).IsCauchy) (hb
   intro j hj k hk
   have h1 := ha j ?_ k ?_ <;> try omega
   have h2 := hb j ?_ k ?_ <;> try omega
-  simp [Section_4_3.dist] at *; rw [←Rat.Close] at *
+  simp [Section_4_3.dist] at *;
+  rw [←Rat.Close] at *
   convert Section_4_3.add_close h1 h2
   linarith
 
@@ -137,24 +196,29 @@ theorem Sequence.add_equiv_left {a a':ℕ → ℚ} (b:ℕ → ℚ) (haa': Equiv 
     Equiv (a + b) (a' + b) := by
   -- This proof is written to follow the structure of the original text.
   rw [equiv_def] at *
-  peel 2 haa' with ε hε haa'
+  peel haa' with ε hε haa'
   rw [Rat.eventuallyClose_def] at *
-  choose N haa' using haa'; use N
+  choose N haa' using haa';
+  use N
   simp [Rat.closeSeq_def] at *
-  peel 5 haa' with n hn hN _ _ haa'
+  peel haa' with n hn hN _ _ haa'
   simp [hn, hN] at *
   convert Section_4_3.add_close haa' (Section_4_3.close_refl (b n.toNat))
   simp
 
 /--Lemma 5.3.7 (Sum of equivalent sequences is equivalent)-/
 theorem Sequence.add_equiv_right {b b':ℕ → ℚ} (a:ℕ → ℚ) (hbb': Equiv b b') :
-    Equiv (a + b) (a + b') := by simp_rw [add_comm]; exact add_equiv_left _ hbb'
+    Equiv (a + b) (a + b') := by
+      simp_rw [add_comm];
+      exact add_equiv_left _ hbb'
 
 /--Lemma 5.3.7 (Sum of equivalent sequences is equivalent)-/
 theorem Sequence.add_equiv {a b a' b':ℕ → ℚ} (haa': Equiv a a')
   (hbb': Equiv b b') :
-    Equiv (a + b) (a' + b') :=
-  equiv_trans (add_equiv_left _ haa') (add_equiv_right _ hbb')
+    Equiv (a + b) (a' + b') := by
+  have h1 := (add_equiv_left b haa')
+  have h2 := (add_equiv_right a' hbb')
+  exact equiv_trans h1 h2
 
 /-- Definition 5.3.4 (Addition of reals) -/
 noncomputable instance Real.add_inst : Add Real where
@@ -164,30 +228,136 @@ noncomputable instance Real.add_inst : Add Real where
       change LIM ((a:ℕ → ℚ) + (b:ℕ → ℚ)) = LIM ((a':ℕ → ℚ) + (b':ℕ → ℚ))
       rw [LIM_eq_LIM]
       . solve_by_elim [Sequence.add_equiv]
-      all_goals apply Sequence.IsCauchy.add <;> rw [CauchySequence.coe_to_sequence] <;> convert @CauchySequence.cauchy ?_
+      all_goals apply Sequence.IsCauchy.add
+      <;> rw [CauchySequence.coe_to_sequence]
+      <;> convert @CauchySequence.cauchy ?_
       )
 
 /-- Definition 5.3.4 (Addition of reals) -/
 theorem Real.LIM_add {a b:ℕ → ℚ} (ha: (a:Sequence).IsCauchy) (hb: (b:Sequence).IsCauchy) :
   LIM a + LIM b = LIM (a + b) := by
-  simp_rw [LIM_def ha, LIM_def hb, LIM_def (Sequence.IsCauchy.add ha hb)]
+  rw [LIM_def ha]
+  rw [LIM_def hb]
+  rw [LIM_def (Sequence.IsCauchy.add ha hb)]
   convert Quotient.liftOn₂_mk _ _ _ _ using 1
-  simp [LIM]; grind
+  simp [LIM];
+  grind
 
+theorem Rat.homogenity_of_aa_x_gt_0_aa_ge_0 {aa x:  ℚ} (hx : x > 0)(haa: aa ≥ 0) : aa * (x / (aa + 1)) < x := by
+  have hnm1 {aa:  ℚ} (haa: aa ≥ 0):  aa / (aa + 1) < 1 := by
+    have hpos : 0 < aa + 1 := by
+      linarith
+    apply (div_lt_iff₀ hpos).2
+    linarith
+  calc _ = x * (aa / (aa + 1)) := by ring
+      _ < x * 1 := by exact mul_lt_mul_of_pos_left (hnm1 haa) (hx)
+      _ = x := by ring
 
 /-- Proposition 5.3.10 (Product of Cauchy sequences is Cauchy) -/
 theorem Sequence.IsCauchy.mul {a b:ℕ → ℚ}  (ha: (a:Sequence).IsCauchy) (hb: (b:Sequence).IsCauchy) :
     (a * b:Sequence).IsCauchy := by
-  sorry
+  have ⟨BA, ⟨hBA1, hBA2⟩⟩ := Sequence.isBounded_of_isCauchy ha
+  have ⟨BB, ⟨hBB1, hBB2⟩⟩ := Sequence.isBounded_of_isCauchy hb
+  rw [coe] at *
+  simp only [boundedBy_def] at *
+  intro ε hε
+  set u := (ε/2) / (BB + 1)
+  set v := (ε/2) / (BA + 1)
+  have hu : 0 < u := by
+    unfold u
+    rw [lt_div_iff₀ (by positivity)]
+    simp_all
+  have hv : 0 < v := by
+    unfold v
+    rw [lt_div_iff₀ (by positivity)]
+    simp_all
+  have huv : BB * u + BA * v ≤ ε := by
+    unfold u v
+    have h1 := Rat.homogenity_of_aa_x_gt_0_aa_ge_0 (half_pos hε) hBA1
+    have h2 := Rat.homogenity_of_aa_x_gt_0_aa_ge_0 (half_pos hε) hBB1
+    linarith
+  -- hBA2 : ∀ (n : ℤ), |if 0 ≤ n then a n.toNat else 0| ≤ BA
+  -- hBB2 : ∀ (n : ℤ), |if 0 ≤ n then b n.toNat else 0| ≤ BB
+  have hba2 : ∀ (n : ℕ), |a n| ≤ BA := by
+    intro n
+    replace hBA2 := hBA2 n
+    simp at hBA2
+    exact hBA2
+  have hbb2 : ∀ (n : ℕ), |b n| ≤ BB := by
+    intro n
+    replace hBB2 := hBB2 n
+    simp at hBB2
+    exact hBB2
+
+  choose N1 ha using ha u hu
+  choose N2 hb using hb v hv
+  use max N1 N2
+  intro j hj k hk
+  have h1 := ha j ?_ k ?_ <;> try omega
+  have h2 := hb j ?_ k ?_ <;> try omega
+  simp [Section_4_3.dist] at *;
+  replace hba2 := hba2 j
+  replace hbb2 := hbb2 k
+  calc _ =  |a j * b j - a j * b k +  a j  * b k - a k * b k| := by simp_all
+      _ ≤ |a j * b j - a j  * b k|  +  |a j  * b k - a k * b k| := by grind
+      _ ≤ |a j * (b j -  b k)|  +  |(a j - a k) * b k| := by grind
+      _ ≤ |a j| * |(b j -  b k)|  +  |(a j - a k)| * |b k| := by grind
+      _ ≤ |a j| * v +  u * |b k| := by gcongr
+      _ ≤ BA * v + u * BB := by gcongr
+      _ ≤  ε  := by grind
 
 /-- Proposition 5.3.10 (Product of equivalent sequences is equivalent) / Exercise 5.3.2 -/
 theorem Sequence.mul_equiv_left {a a':ℕ → ℚ} (b:ℕ → ℚ) (hb : (b:Sequence).IsCauchy) (haa': Equiv a a') :
   Equiv (a * b) (a' * b) := by
-  sorry
+    -- standby
+    have ⟨BB, ⟨hBB1, hBB2⟩⟩ := Sequence.isBounded_of_isCauchy hb
+    simp only [boundedBy_def] at *
+    replace hBB2 : ∀ (n : ℕ), |b n| ≤ BB := by
+      intro n
+      have := hBB2 n
+      simp at this
+      exact this
+    rw [equiv_def] at *
+
+    intro ε he
+    set u := (ε/(BB+1))
+    have hu : 0 < u := by
+      unfold u
+      rw [lt_div_iff₀ (by positivity)]
+      simp_all
+    have h1 := Rat.homogenity_of_aa_x_gt_0_aa_ge_0 he hBB1
+    replace haa' := haa' u hu
+    simp only [Rat.eventuallyClose_def] at *
+    obtain ⟨N2, hN2⟩ := haa'
+    use max 0 N2
+    simp only [Rat.closeSeq_def]
+    intro n hn1 hn2
+    lift n to ℕ using (by grind)
+    simp at hn1 hn2
+    simp [hn1]
+    simp only [Rat.Close]
+    simp only [Rat.closeSeq_def] at hN2
+    replace hN2 := hN2 n (by aesop) (by aesop)
+    simp at hN2
+    simp [hn1] at hN2
+    simp only [Rat.Close] at hN2
+    replace hBB2 := hBB2 n
+    calc _ =  |(a n  - a' n) * b n| := by grind
+         _ ≤  |(a n  - a' n)| * |b n| := by grind
+         _ ≤  |(a n  - a' n)| * BB := by gcongr
+         _ ≤  u * BB := by gcongr
+         _ ≤ ( ε / (BB + 1)) * BB := by
+            unfold u
+            nlinarith
+         _ = BB * ( ε / (BB + 1)) := by ring
+         _ ≤ ε := by grind
+
 
 /--Proposition 5.3.10 (Product of equivalent sequences is equivalent) / Exercise 5.3.2 -/
 theorem Sequence.mul_equiv_right {b b':ℕ → ℚ} (a:ℕ → ℚ)  (ha : (a:Sequence).IsCauchy)  (hbb': Equiv b b') :
-  Equiv (a * b) (a * b') := by simp_rw [mul_comm]; exact mul_equiv_left a ha hbb'
+  Equiv (a * b) (a * b') := by
+    simp_rw [mul_comm];
+    exact mul_equiv_left a ha hbb'
 
 /--Proposition 5.3.10 (Product of equivalent sequences is equivalent) / Exercise 5.3.2 -/
 theorem Sequence.mul_equiv
@@ -195,8 +365,10 @@ theorem Sequence.mul_equiv
   (ha : (a:Sequence).IsCauchy)
   (hb' : (b':Sequence).IsCauchy)
   (haa': Equiv a a')
-  (hbb': Equiv b b') : Equiv (a * b) (a' * b') :=
-    equiv_trans (mul_equiv_right _ ha hbb') (mul_equiv_left _ hb' haa')
+  (hbb': Equiv b b') : Equiv (a * b) (a' * b') := by
+    have h1 := (mul_equiv_left _ hb' haa')
+    have h2 := (mul_equiv_right _ ha hbb')
+    exact equiv_trans h2 h1
 
 /-- Definition 5.3.9 (Product of reals) -/
 noncomputable instance Real.mul_inst : Mul Real where
@@ -219,12 +391,56 @@ instance Real.instRatCast : RatCast Real where
   ratCast := fun q ↦
     Quotient.mk _ (CauchySequence.mk' (a := fun _ ↦ q) (Sequence.IsCauchy.const q))
 
-theorem Real.ratCast_def (q:ℚ) : (q:Real) = LIM (fun _ ↦ q) := by rw [LIM_def]; rfl
+theorem Real.ratCast_def (q:ℚ) : (q:Real) = LIM (fun _ ↦ q) := by
+  rw [LIM_def];
+  rfl
 
 /-- Exercise 5.3.3 -/
 @[simp]
 theorem Real.ratCast_inj (q r:ℚ) : (q:Real) = (r:Real) ↔ q = r := by
-  sorry
+  simp [ratCast_def]
+  rw [LIM_eq_LIM]
+  simp only [Sequence.equiv_iff] at *
+  constructor <;> intro h
+  . by_contra h0
+    wlog h1 : q < r
+    . have h_0 : 1 = 1 := rfl
+      have h2 : r < q := by grind
+      have h3 : ¬r = q := by grind
+      apply this r q _ h3 h2
+      intro e he
+      replace h := h e he
+      obtain ⟨N, hN⟩ := h
+      use N
+      intro n hn
+      replace hN := hN n hn
+      rw [abs_sub_comm]
+      exact hN
+    set a := (r - q)/2
+    replace h := h a (by aesop)
+    obtain ⟨N, hN⟩ := h
+    replace hN := hN N (by aesop)
+    unfold a at hN
+    rw [abs_sub_comm] at hN
+    have h1 : |r - q| = r - q := by grind
+    rw [h1] at hN
+    rw [le_div_iff₀ (by positivity)] at hN
+    have h2 : 0 < (r - q) := by grind
+    have h3 := (div_le_div_iff_of_pos_right h2).mpr hN
+    have h4 : (r - q) * 2 / (r - q) = 2 := by grind
+    have h5 : (r - q) / (r - q) = 1 := by grind
+    rw [h4, h5] at h3
+    linarith
+  . intro e he
+    use 0
+    intro n hn
+    rw [h]
+    simp
+    positivity
+  all_goals exact Sequence.IsCauchy.const _
+
+
+
 
 instance Real.instOfNat {n:ℕ} : OfNat Real n where
   ofNat := ((n:ℚ):Real)
