@@ -221,24 +221,32 @@ lemma Sequence.equiv_example :
     _ = |2 * (10:ℚ)^(-(n:ℤ)-1)| := by ring_nf
     _ = _ := abs_of_nonneg (by positivity)
   have hab' (N:ℕ) : ∀ n ≥ N, |a n - b n| ≤ 2 * 10 ^(-(N:ℤ)-1) := by
-    intro n hn; rw [hab n]; gcongr; norm_num
+    intro n hn;
+    rw [hab n];
+    gcongr;
+    norm_num
   have hN : ∃ N:ℕ, 2 * (10:ℚ) ^(-(N:ℤ)-1) ≤ ε := by
     have hN' (N:ℕ) : 2 * (10:ℚ)^(-(N:ℤ)-1) ≤ 2/(N+1) := calc
       _ = 2 / (10:ℚ)^(N+1) := by
         field_simp
-        simp [←Section_4_3.pow_eq_zpow, ←zpow_add₀ (show 10 ≠ (0:ℚ) by norm_num)]
+        simp [←Section_4_3.pow_eq_zpow]
+        simp [←zpow_add₀ (show 10 ≠ (0:ℚ) by norm_num)]
       _ ≤ _ := by
         gcongr
         apply le_trans _ (pow_le_pow_left₀ (show 0 ≤ (2:ℚ) by norm_num)
           (show (2:ℚ) ≤ 10 by norm_num) _)
-        convert Nat.cast_le.mpr (Section_4_3.two_pow_geq (N+1)) using 1 <;> try infer_instance
+        convert Nat.cast_le.mpr (Section_4_3.two_pow_geq (N+1))
+        using 1 <;>
+        try infer_instance
         all_goals simp
     choose N hN using exists_nat_gt (2 / ε)
     refine ⟨ N, (hN' N).trans ?_ ⟩
     rw [div_le_iff₀ (by positivity)]
     rw [div_lt_iff₀ hε] at hN
     grind [mul_comm]
-  choose N hN using hN; use N; intro n hn
+  choose N hN using hN;
+  use N;
+  intro n hn
   linarith [hab' N n hn]
 
 theorem Sequence.Equiv_Is_Symm {a b: ℕ → ℚ} (hab: Equiv a b)  :
